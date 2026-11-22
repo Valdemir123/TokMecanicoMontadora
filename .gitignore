@@ -1,0 +1,22 @@
+# .NET (api)
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
+TestResults/
+appsettings.*.local.json
+
+# Segredos / configuracoes locais
+.env
+.env.*
+*.pfx
+*.keystore
+*.jks
+key.properties
+
+# IDEs / SO
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
