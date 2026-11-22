@@ -229,7 +229,7 @@ class CampoData extends StatelessWidget {
   }
 }
 
-/// Logo do Tok Mecânico (checklist + mascote + nome); usa a versão branca no tema escuro.
+/// Logo do Tok Mecânico (checklist + carro + nome); usa a versão branca no tema escuro.
 class LogoTok extends StatelessWidget {
   const LogoTok({super.key, this.altura = 140, this.soSimbolo = false});
 
@@ -241,7 +241,7 @@ class LogoTok extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final escuro = Theme.of(context).brightness == Brightness.dark;
-    final nome = soSimbolo ? 'simbolo' : 'logo-completo';
+    final nome = soSimbolo ? 'simbolo' : 'logo-vertical';
     return Image.asset(
       'assets/logo/$nome${escuro ? '-branco' : ''}.png',
       height: altura,
@@ -252,6 +252,7 @@ class LogoTok extends StatelessWidget {
 }
 
 /// Mascote do Tok Mecânico (mecânico com chave e pneu).
+/// Ilustração do Freepik: o crédito fica na tela "Sobre" (ver [mostrarSobre]).
 class Mascote extends StatelessWidget {
   const Mascote({super.key, this.altura = 140});
 
@@ -303,4 +304,21 @@ class RecadoMascote extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Tela "Sobre", com os créditos exigidos pela licença do mascote (Freepik).
+void mostrarSobre(BuildContext context) {
+  showAboutDialog(
+    context: context,
+    applicationName: 'Tok Mecânico',
+    applicationVersion: '1.0.0',
+    applicationIcon: const LogoTok(altura: 48, soSimbolo: true),
+    applicationLegalese: 'Controle de manutenções do seu veículo.',
+    children: const [
+      SizedBox(height: 16),
+      Text('Créditos', style: TextStyle(fontWeight: FontWeight.bold)),
+      SizedBox(height: 4),
+      Text('Ilustração do mascote: Freepik (freepik.com)'),
+    ],
+  );
 }

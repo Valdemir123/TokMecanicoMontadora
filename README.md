@@ -71,3 +71,8 @@ cd app; flutter test
 - **Login/autenticação**: hoje o app guarda o id do usuário no aparelho e a API não exige login. Como há CPF e endereço (dados pessoais, LGPD), isso precisa estar pronto antes de ir ao ar.
 - Termo de uso e consentimento (LGPD).
 - Trocar `EnsureCreated` por migrations do EF Core e definir o banco de produção (ex.: PostgreSQL).
+
+## Logo e imagens
+
+- Logo (checklist + carro + nome) e ícones: `app/assets/logo/` (SVG + PNG). Desenho recriado a partir de um modelo do Turbologo — confirmar a licença do plano antes de registrar a marca.
+- Mascote (mecânico): `app/assets/mascote/mecanico.png`, ilustração do **Freepik**. A licença do Freepik **não permite uso como logo/marca**; ele é usado só dentro do app, com crédito na tela "Sobre o Tok Mecânico" (obrigatório na licença gratuita).

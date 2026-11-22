@@ -70,10 +70,15 @@ class _VeiculosTelaState extends State<VeiculosTela> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.account_circle),
-            onSelected: (op) => op == 'dados' ? _meusDados() : widget.aoSair(),
+            onSelected: (op) => switch (op) {
+              'dados' => _meusDados(),
+              'sobre' => mostrarSobre(context),
+              _ => widget.aoSair(),
+            },
             itemBuilder: (_) => [
               PopupMenuItem(enabled: false, child: Text(widget.usuario.nomeCompleto)),
               const PopupMenuItem(value: 'dados', child: Text('Meus dados')),
+              const PopupMenuItem(value: 'sobre', child: Text('Sobre o Tok Mecânico')),
               const PopupMenuItem(value: 'sair', child: Text('Sair deste aparelho')),
             ],
           ),
