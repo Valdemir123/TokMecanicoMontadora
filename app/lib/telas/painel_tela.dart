@@ -173,14 +173,8 @@ class _PainelTelaState extends State<PainelTela> {
         const SizedBox(width: 8),
         _Contador(rotulo: 'Sem registro', valor: p.semRegistro, situacao: Situacao.semRegistro),
       ]),
-      if (p.semRegistro > 0)
-        Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Text(
-            'Toque em um item "sem registro" para informar quando ele foi feito pela última vez.',
-            style: t.bodySmall,
-          ),
-        ),
+      const SizedBox(height: 12),
+      _recado(p),
       const TituloSecao('Itens de manutenção'),
       for (final item in p.itens)
         Card(
@@ -194,6 +188,35 @@ class _PainelTelaState extends State<PainelTela> {
           ),
         ),
     ]);
+  }
+
+  Widget _recado(Painel p) {
+    final cores = Theme.of(context).colorScheme;
+    if (p.vencidos > 0) {
+      return RecadoMascote(
+        cor: Situacao.vencido.cor(cores),
+        titulo: p.vencidos == 1 ? '1 item vencido!' : '${p.vencidos} itens vencidos!',
+        texto: 'Não deixe para depois: manutenção atrasada sai mais cara e compromete a segurança.',
+      );
+    }
+    if (p.proximos > 0) {
+      return RecadoMascote(
+        cor: Situacao.proximo.cor(cores),
+        titulo: p.proximos == 1 ? '1 item chegando no prazo' : '${p.proximos} itens chegando no prazo',
+        texto: 'Já vale ir agendando com a sua oficina.',
+      );
+    }
+    if (p.semRegistro == 0) {
+      return RecadoMascote(
+        cor: Situacao.emDia.cor(cores),
+        titulo: 'Tudo em dia!',
+        texto: 'Seu veículo está com as manutenções em ordem. Continue registrando o km.',
+      );
+    }
+    return RecadoMascote(
+      titulo: 'Me conte o histórico',
+      texto: 'Toque nos itens "sem registro" e informe quando foram feitos pela última vez.',
+    );
   }
 
   static String _resumo(ItemManutencao i) {

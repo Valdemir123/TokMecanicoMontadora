@@ -142,11 +142,14 @@ class _Vazio extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(children: [
-            Icon(Icons.directions_car, size: 56, color: Theme.of(context).colorScheme.primary),
+            const Mascote(altura: 180),
             const SizedBox(height: 12),
-            const Text('Nenhum veículo cadastrado ainda.', textAlign: TextAlign.center),
+            Text('Vamos começar?',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center),
             const SizedBox(height: 4),
-            const Text('Cadastre seu veículo para acompanhar as manutenções.', textAlign: TextAlign.center),
+            const Text('Cadastre seu veículo e eu aviso quando cada manutenção estiver chegando.',
+                textAlign: TextAlign.center),
             const SizedBox(height: 16),
             FilledButton.icon(onPressed: aoAdicionar, icon: const Icon(Icons.add), label: const Text('Cadastrar veículo')),
           ]),

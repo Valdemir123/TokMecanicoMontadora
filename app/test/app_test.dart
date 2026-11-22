@@ -88,6 +88,7 @@ void main() {
     expect(find.text('52.000 km'), findsOneWidget);
     expect(find.text('Troca de óleo do motor'), findsOneWidget);
     expect(find.text('passou 2.000 km'), findsOneWidget);
+    expect(find.text('1 item vencido!'), findsOneWidget);
     expect(find.text('Vencido'), findsOneWidget);
     expect(find.text('Sem registro'), findsNWidgets(2)); // contador + selo do item
   });

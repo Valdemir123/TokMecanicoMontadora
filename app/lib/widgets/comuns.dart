@@ -229,7 +229,7 @@ class CampoData extends StatelessWidget {
   }
 }
 
-/// Logo do Tok Mecânico; usa a versão branca no tema escuro.
+/// Logo do Tok Mecânico (checklist + mascote + nome); usa a versão branca no tema escuro.
 class LogoTok extends StatelessWidget {
   const LogoTok({super.key, this.altura = 140, this.soSimbolo = false});
 
@@ -241,12 +241,66 @@ class LogoTok extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final escuro = Theme.of(context).brightness == Brightness.dark;
-    final nome = soSimbolo ? 'simbolo' : 'logo-vertical';
+    final nome = soSimbolo ? 'simbolo' : 'logo-completo';
     return Image.asset(
       'assets/logo/$nome${escuro ? '-branco' : ''}.png',
       height: altura,
       fit: BoxFit.contain,
       semanticLabel: 'Tok Mecânico',
+    );
+  }
+}
+
+/// Mascote do Tok Mecânico (mecânico com chave e pneu).
+class Mascote extends StatelessWidget {
+  const Mascote({super.key, this.altura = 140});
+
+  final double altura;
+
+  @override
+  Widget build(BuildContext context) => Image.asset(
+        'assets/mascote/mecanico.png',
+        height: altura,
+        fit: BoxFit.contain,
+        excludeFromSemantics: true,
+      );
+}
+
+/// Recado do mascote: o mecânico ao lado de um balão de texto.
+class RecadoMascote extends StatelessWidget {
+  const RecadoMascote({super.key, required this.titulo, required this.texto, this.cor, this.acao});
+
+  final String titulo;
+  final String texto;
+  final Color? cor;
+  final Widget? acao;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final destaque = cor ?? Theme.of(context).colorScheme.primary;
+    return Card(
+      color: destaque.withValues(alpha: 0.08),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: destaque.withValues(alpha: 0.35)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 12, 16, 12),
+        child: Row(children: [
+          const Mascote(altura: 96),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(titulo, style: t.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: destaque)),
+              const SizedBox(height: 4),
+              Text(texto),
+              if (acao != null) ...[const SizedBox(height: 8), acao!],
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 }
