@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -23,6 +25,17 @@ class PainelTela extends StatefulWidget {
 class _PainelTelaState extends State<PainelTela> {
   Future<Painel>? _painel;
 
+  /// Item recém-alterado: fica destacado por alguns segundos e a tela rola até ele.
+  String? _destaque;
+  final _chaves = <String, GlobalKey>{};
+  Timer? _timerDestaque;
+
+  @override
+  void dispose() {
+    _timerDestaque?.cancel();
+    super.dispose();
+  }
+
   ApiClient get _api => Servicos.of(context).api;
 
   @override
@@ -33,9 +46,46 @@ class _PainelTelaState extends State<PainelTela> {
 
   void _recarregar() => setState(() => _painel = _api.painel(widget.veiculoId));
 
-  Future<void> _abrir(Widget tela) async {
-    final mudou = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => tela));
-    if (mudou == true && mounted) _recarregar();
+  /// Abre uma tela do painel e sempre recarrega ao voltar (salvou ou não).
+  Future<Object?> _abrir(Widget tela) async {
+    final resultado = await Navigator.of(context).push<Object>(MaterialPageRoute(builder: (_) => tela));
+    if (mounted) _recarregar();
+    return resultado;
+  }
+
+  Future<void> _abrirItem(String veiculoId, [ItemManutencao? item]) async {
+    final r = await _abrir(ItemFormTela(veiculoId: veiculoId, item: item));
+    if (!mounted) return;
+    if (r is ItemManutencao) {
+      mostrarMensagem(context, _confirmacao(r));
+      _destacar(r.id);
+    } else if (r == ItemFormTela.removido) {
+      mostrarMensagem(context, '"${item?.nome}" removido.');
+    }
+  }
+
+  void _destacar(String id) {
+    _timerDestaque?.cancel();
+    setState(() => _destaque = id);
+    // espera o painel recarregar e rola até o item
+    _painel?.then((_) => WidgetsBinding.instance.addPostFrameCallback((_) {
+          final ctx = _chaves[id]?.currentContext;
+          if (ctx != null && ctx.mounted) {
+            Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 400), alignment: 0.3);
+          }
+        }));
+    _timerDestaque = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _destaque = null);
+    });
+  }
+
+  static String _confirmacao(ItemManutencao i) {
+    final proxima = [
+      if (i.proximaKm != null) '${formatarKm(i.proximaKm!)} km',
+      if (i.proximaData != null) formatarData(i.proximaData!),
+    ];
+    final quando = proxima.isEmpty ? '' : ' Próxima: ${proxima.join(i.referencia == Referencia.ambos ? ' ou ' : '')}.';
+    return '${i.nome}: ${i.situacao.rotulo.toLowerCase()} (${i.referencia.rotulo.toLowerCase()}).$quando';
   }
 
   Future<void> _registrarKm(Veiculo v) async {
@@ -103,7 +153,7 @@ class _PainelTelaState extends State<PainelTela> {
                 PopupMenuButton<String>(
                   onSelected: (op) => switch (op) {
                     'editar' => _editarVeiculo(p.veiculo),
-                    'item' => _abrir(ItemFormTela(veiculoId: p.veiculo.id)),
+                    'item' => _abrirItem(p.veiculo.id),
                     _ => _excluirVeiculo(p.veiculo),
                   },
                   itemBuilder: (_) => const [
@@ -177,14 +227,27 @@ class _PainelTelaState extends State<PainelTela> {
       _recado(p),
       const TituloSecao('Itens de manutenção'),
       for (final item in p.itens)
-        Card(
+        AnimatedContainer(
+          key: _chaves.putIfAbsent(item.id, GlobalKey.new),
+          duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: Icon(item.situacao.icone, color: item.situacao.cor(Theme.of(context).colorScheme)),
-            title: Text(item.nome),
-            subtitle: Text(_resumo(item)),
-            trailing: SeloSituacao(item.situacao),
-            onTap: () => _abrir(ItemFormTela(veiculoId: v.id, item: item)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: item.id == _destaque ? Theme.of(context).colorScheme.primary : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: Card(
+            margin: EdgeInsets.zero,
+            color: item.id == _destaque ? Theme.of(context).colorScheme.primaryContainer : null,
+            child: ListTile(
+              leading: Icon(item.situacao.icone, color: item.situacao.cor(Theme.of(context).colorScheme)),
+              title: Text(item.nome),
+              subtitle: Text(_resumo(item)),
+              trailing: SeloSituacao(item.situacao),
+              onTap: () => _abrirItem(v.id, item),
+            ),
           ),
         ),
     ]);
@@ -220,25 +283,26 @@ class _PainelTelaState extends State<PainelTela> {
   }
 
   static String _resumo(ItemManutencao i) {
+    final ref = switch (i.referencia) {
+      Referencia.km => 'Por km',
+      Referencia.data => 'Por data',
+      Referencia.ambos => '',
+    };
+    String juntar(List<String> partes, String sep) =>
+        [if (ref.isNotEmpty) ref, partes.join(sep)].where((t) => t.isNotEmpty).join(' · ');
+
     if (i.situacao == Situacao.semRegistro) {
-      final partes = [
-        if (i.intervaloKm != null) 'a cada ${formatarKm(i.intervaloKm!)} km',
-        if (i.intervaloMeses != null) 'a cada ${i.intervaloMeses} meses',
-      ];
-      return partes.join(' ou ');
+      return juntar([
+        if (i.referencia.usaKm && i.intervaloKm != null) 'a cada ${formatarKm(i.intervaloKm!)} km',
+        if (i.referencia.usaData && i.intervaloMeses != null) 'a cada ${i.intervaloMeses} meses',
+      ], ' ou ');
     }
-    final partes = <String>[];
-    if (i.kmRestante != null) {
-      partes.add(i.kmRestante! <= 0
-          ? 'passou ${formatarKm(-i.kmRestante!)} km'
-          : 'faltam ${formatarKm(i.kmRestante!)} km');
-    }
-    if (i.diasRestantes != null) {
-      partes.add(i.diasRestantes! <= 0
-          ? 'venceu em ${formatarData(i.proximaData!)}'
-          : 'até ${formatarData(i.proximaData!)}');
-    }
-    return partes.join(' · ');
+    return juntar([
+      if (i.kmRestante != null)
+        i.kmRestante! <= 0 ? 'passou ${formatarKm(-i.kmRestante!)} km' : 'faltam ${formatarKm(i.kmRestante!)} km',
+      if (i.diasRestantes != null)
+        i.diasRestantes! <= 0 ? 'venceu em ${formatarData(i.proximaData!)}' : 'até ${formatarData(i.proximaData!)}',
+    ], ' · ');
   }
 }
 

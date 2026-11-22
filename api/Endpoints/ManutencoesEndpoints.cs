@@ -156,6 +156,10 @@ public static class ManutencoesEndpoints
         e.Se(req.Nome?.Trim().Length > 100, "nome", "Máximo de 100 caracteres.");
         e.Se(req.IntervaloKm is null && req.IntervaloMeses is null, "intervaloKm",
             "Informe o intervalo em km, em meses ou ambos.");
+        e.Se(req.Referencia == Referencia.Km && req.IntervaloKm is null, "intervaloKm",
+            "Para controlar por km, informe o intervalo em km.");
+        e.Se(req.Referencia == Referencia.Data && req.IntervaloMeses is null, "intervaloMeses",
+            "Para controlar por data, informe o intervalo em meses.");
         e.Se(req.IntervaloKm is <= 0 or > 500_000, "intervaloKm", "Intervalo de km inválido.");
         e.Se(req.IntervaloMeses is <= 0 or > 240, "intervaloMeses", "Intervalo de meses inválido.");
         e.Se(req.UltimaKm is < 0 or > VeiculosEndpoints.KmMaximo, "ultimaKm", "Km inválido.");
@@ -169,6 +173,7 @@ public static class ManutencoesEndpoints
         item.Observacao = string.IsNullOrWhiteSpace(req.Observacao) ? null : req.Observacao.Trim();
         item.IntervaloKm = req.IntervaloKm;
         item.IntervaloMeses = req.IntervaloMeses;
+        item.Referencia = req.Referencia ?? ReferenciaPadrao.De(req.IntervaloKm, req.IntervaloMeses);
         item.UltimaKm = req.UltimaKm;
         item.UltimaData = req.UltimaData;
     }

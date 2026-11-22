@@ -29,7 +29,7 @@ const _veiculo = {
 };
 
 Map<String, dynamic> _item(String id, String nome, String situacao, {int? kmRestante}) => {
-      'id': id, 'codigoCatalogo': null, 'nome': nome, 'observacao': null, 'personalizado': false,
+      'id': id, 'codigoCatalogo': null, 'nome': nome, 'observacao': null, 'personalizado': false, 'referencia': 'Ambos',
       'intervaloKm': 10000, 'intervaloMeses': 12, 'ultimaKm': null, 'ultimaData': null,
       'situacao': situacao, 'proximaKm': null, 'kmRestante': kmRestante, 'proximaData': null, 'diasRestantes': null,
     };

@@ -72,11 +72,11 @@ class ApiClient {
 
   // ---------- Itens, km e manutenções ----------
 
-  Future<void> criarItem(String veiculoId, Map<String, dynamic> dados) =>
-      _send('POST', '/api/veiculos/$veiculoId/itens', dados);
+  Future<ItemManutencao> criarItem(String veiculoId, Map<String, dynamic> dados) async =>
+      ItemManutencao.fromJson(await _send('POST', '/api/veiculos/$veiculoId/itens', dados));
 
-  Future<void> atualizarItem(String veiculoId, String itemId, Map<String, dynamic> dados) =>
-      _send('PUT', '/api/veiculos/$veiculoId/itens/$itemId', dados);
+  Future<ItemManutencao> atualizarItem(String veiculoId, String itemId, Map<String, dynamic> dados) async =>
+      ItemManutencao.fromJson(await _send('PUT', '/api/veiculos/$veiculoId/itens/$itemId', dados));
 
   Future<void> excluirItem(String veiculoId, String itemId) =>
       _send('DELETE', '/api/veiculos/$veiculoId/itens/$itemId');

@@ -46,6 +46,8 @@ public class TokMecanicoDbContext(DbContextOptions<TokMecanicoDbContext> options
             e.Property(i => i.CodigoCatalogo).HasMaxLength(40);
             e.Property(i => i.Observacao).HasMaxLength(300);
             e.Ignore(i => i.Personalizado);
+            e.Property(i => i.Referencia).HasConversion<string>().HasMaxLength(10)
+                .HasDefaultValue(Referencia.Ambos).HasSentinel((Referencia)(-1));
         });
 
         b.Entity<Manutencao>(e =>

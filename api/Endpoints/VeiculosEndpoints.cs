@@ -47,6 +47,7 @@ public static class VeiculosEndpoints
                 Observacao = c.Observacao,
                 IntervaloKm = c.IntervaloKm,
                 IntervaloMeses = c.IntervaloMeses,
+                Referencia = ReferenciaPadrao.De(c.IntervaloKm, c.IntervaloMeses),
             }));
             if (req.KmAtual is { } km)
                 veiculo.RegistrosKm.Add(new RegistroKm { Km = km, Data = hoje });

@@ -1,5 +1,16 @@
 namespace TokMecanico.Api.Domain;
 
+/// <summary>Qual parâmetro define o vencimento do item.</summary>
+public enum Referencia
+{
+    /// <summary>O que vencer primeiro: km ou data.</summary>
+    Ambos,
+    /// <summary>Só a quilometragem conta.</summary>
+    Km,
+    /// <summary>Só o tempo conta.</summary>
+    Data,
+}
+
 public enum Situacao
 {
     /// <summary>Nunca foi informada a última realização.</summary>
@@ -26,10 +37,13 @@ public static class StatusManutencao
 
     public static StatusItem Calcular(ItemManutencao item, int kmAtual, DateOnly hoje)
     {
-        int? proximaKm = item is { IntervaloKm: { } ik, UltimaKm: { } uk } ? uk + ik : null;
+        var usaKm = item.Referencia != Referencia.Data;
+        var usaData = item.Referencia != Referencia.Km;
+
+        int? proximaKm = usaKm && item is { IntervaloKm: { } ik, UltimaKm: { } uk } ? uk + ik : null;
         int? kmRestante = proximaKm - kmAtual;
 
-        DateOnly? proximaData = item is { IntervaloMeses: { } im, UltimaData: { } ud } ? ud.AddMonths(im) : null;
+        DateOnly? proximaData = usaData && item is { IntervaloMeses: { } im, UltimaData: { } ud } ? ud.AddMonths(im) : null;
         int? diasRestantes = proximaData is { } pd ? pd.DayNumber - hoje.DayNumber : null;
 
         Situacao situacao;
@@ -44,6 +58,7 @@ public static class StatusManutencao
         else
         {
             var kmAviso = Math.Max(KmAvisoMinimo, (item.IntervaloKm ?? 0) / 10);
+            // kmRestante/diasRestantes já são nulos para o parâmetro que não é referência.
             situacao = kmRestante <= kmAviso || diasRestantes <= DiasAviso
                 ? Situacao.Proximo
                 : Situacao.EmDia;
@@ -51,4 +66,15 @@ public static class StatusManutencao
 
         return new StatusItem(situacao, proximaKm, kmRestante, proximaData, diasRestantes);
     }
+}
+
+public static class ReferenciaPadrao
+{
+    /// <summary>Referência natural pelos intervalos informados.</summary>
+    public static Referencia De(int? intervaloKm, int? intervaloMeses) => (intervaloKm, intervaloMeses) switch
+    {
+        (not null, null) => Referencia.Km,
+        (null, not null) => Referencia.Data,
+        _ => Referencia.Ambos,
+    };
 }

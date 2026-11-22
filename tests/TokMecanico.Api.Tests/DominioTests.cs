@@ -109,3 +109,42 @@ public class SenhasTests
     [InlineData(null, false)]
     public void RegrasDaSenha(string? senha, bool valida) => Assert.Equal(valida, Senhas.Problema(senha) is null);
 }
+
+public class ReferenciaTests
+{
+    private static readonly DateOnly Hoje = new(2026, 11, 22);
+
+    // Óleo feito há 13 meses (data vencida), mas rodou pouco (km em dia).
+    private static ItemManutencao Oleo(Referencia r) => new()
+    {
+        Nome = "Óleo", IntervaloKm = 10_000, IntervaloMeses = 12, UltimaKm = 48_000, UltimaData = new(2025, 10, 1), Referencia = r,
+    };
+
+    [Fact]
+    public void Ambos_VenceOQueVierPrimeiro() =>
+        Assert.Equal(Situacao.Vencido, StatusManutencao.Calcular(Oleo(Referencia.Ambos), 50_000, Hoje).Situacao);
+
+    [Fact]
+    public void PorKm_IgnoraAData()
+    {
+        var s = StatusManutencao.Calcular(Oleo(Referencia.Km), 50_000, Hoje);
+        Assert.Equal(Situacao.EmDia, s.Situacao);
+        Assert.Equal(58_000, s.ProximaKm);
+        Assert.Null(s.ProximaData);
+    }
+
+    [Fact]
+    public void PorData_IgnoraOKm()
+    {
+        var s = StatusManutencao.Calcular(Oleo(Referencia.Data), 70_000, Hoje);
+        Assert.Equal(Situacao.Vencido, s.Situacao);
+        Assert.Null(s.ProximaKm);
+        Assert.NotNull(s.ProximaData);
+    }
+
+    [Theory]
+    [InlineData(10_000, null, Referencia.Km)]
+    [InlineData(null, 36, Referencia.Data)]
+    [InlineData(10_000, 12, Referencia.Ambos)]
+    public void Padrao(int? km, int? meses, Referencia esperada) => Assert.Equal(esperada, ReferenciaPadrao.De(km, meses));
+}

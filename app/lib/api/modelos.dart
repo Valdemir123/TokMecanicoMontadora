@@ -141,6 +141,24 @@ class Veiculo {
 
 enum Situacao { semRegistro, emDia, proximo, vencido }
 
+/// Qual parâmetro define o vencimento do item.
+enum Referencia {
+  ambos('Ambos', 'O que vencer 1º'),
+  km('Km', 'Por km'),
+  data('Data', 'Por data');
+
+  const Referencia(this.api, this.rotulo);
+
+  /// Valor usado na API.
+  final String api;
+  final String rotulo;
+
+  bool get usaKm => this != Referencia.data;
+  bool get usaData => this != Referencia.km;
+
+  static Referencia de(String? v) => Referencia.values.firstWhere((r) => r.api == v, orElse: () => Referencia.ambos);
+}
+
 Situacao _situacao(String s) => switch (s) {
       'EmDia' => Situacao.emDia,
       'Proximo' => Situacao.proximo,
@@ -155,6 +173,7 @@ class ItemManutencao {
     required this.nome,
     this.observacao,
     required this.personalizado,
+    required this.referencia,
     this.intervaloKm,
     this.intervaloMeses,
     this.ultimaKm,
@@ -171,6 +190,7 @@ class ItemManutencao {
   final String nome;
   final String? observacao;
   final bool personalizado;
+  final Referencia referencia;
   final int? intervaloKm;
   final int? intervaloMeses;
   final int? ultimaKm;
@@ -187,6 +207,7 @@ class ItemManutencao {
         nome: j['nome'],
         observacao: j['observacao'],
         personalizado: j['personalizado'],
+        referencia: Referencia.de(j['referencia']),
         intervaloKm: j['intervaloKm'],
         intervaloMeses: j['intervaloMeses'],
         ultimaKm: j['ultimaKm'],

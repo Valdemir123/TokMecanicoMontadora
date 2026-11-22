@@ -63,7 +63,11 @@ var app = builder.Build();
 
 // MVP: cria o banco na primeira execução. Trocar por migrations antes de ir para produção.
 using (var scope = app.Services.CreateScope())
-    scope.ServiceProvider.GetRequiredService<TokMecanicoDbContext>().Database.EnsureCreated();
+{
+    var db = scope.ServiceProvider.GetRequiredService<TokMecanicoDbContext>();
+    db.Database.EnsureCreated();
+    AjustesDeEsquema.Aplicar(db);
+}
 
 if (app.Environment.IsDevelopment())
 {

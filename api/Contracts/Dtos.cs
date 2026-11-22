@@ -23,7 +23,7 @@ public record VeiculoRequest(
 
 public record ItemManutencaoRequest(
     string? Nome, string? Observacao, int? IntervaloKm, int? IntervaloMeses,
-    int? UltimaKm, DateOnly? UltimaData);
+    int? UltimaKm, DateOnly? UltimaData, Referencia? Referencia = null);
 
 public record RegistroKmRequest(int? Km, DateOnly? Data);
 
@@ -64,14 +64,14 @@ public record VeiculoResponse(
 
 public record ItemManutencaoResponse(
     Guid Id, string? CodigoCatalogo, string Nome, string? Observacao, bool Personalizado,
-    int? IntervaloKm, int? IntervaloMeses, int? UltimaKm, DateOnly? UltimaData,
+    Referencia Referencia, int? IntervaloKm, int? IntervaloMeses, int? UltimaKm, DateOnly? UltimaData,
     Situacao Situacao, int? ProximaKm, int? KmRestante, DateOnly? ProximaData, int? DiasRestantes)
 {
     public static ItemManutencaoResponse De(ItemManutencao i, int kmAtual, DateOnly hoje)
     {
         var s = StatusManutencao.Calcular(i, kmAtual, hoje);
         return new(i.Id, i.CodigoCatalogo, i.Nome, i.Observacao, i.Personalizado,
-            i.IntervaloKm, i.IntervaloMeses, i.UltimaKm, i.UltimaData,
+            i.Referencia, i.IntervaloKm, i.IntervaloMeses, i.UltimaKm, i.UltimaData,
             s.Situacao, s.ProximaKm, s.KmRestante, s.ProximaData, s.DiasRestantes);
     }
 }

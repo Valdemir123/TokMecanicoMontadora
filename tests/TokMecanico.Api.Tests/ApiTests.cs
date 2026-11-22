@@ -222,6 +222,36 @@ public class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Referencia_PadraoDoCatalogo_EPodeSerTrocada()
+    {
+        var (_, http) = await CriarUsuario("371.835.360-17");
+        var v = await CriarVeiculo(http, km: 50_000);
+        var itens = (await Painel(http, v.Id)).Itens;
+        Assert.Equal(Referencia.Data, itens.Single(i => i.CodigoCatalogo == "bateria").Referencia);
+        Assert.Equal(Referencia.Km, itens.Single(i => i.CodigoCatalogo == "pastilhas-freio").Referencia);
+        var oleo = itens.Single(i => i.CodigoCatalogo == "oleo-motor");
+        Assert.Equal(Referencia.Ambos, oleo.Referencia);
+
+        // Óleo trocado há 13 meses com pouco km: vencido por data; ao marcar "por km" fica em dia.
+        var r = await http.PutAsJsonAsync($"/api/veiculos/{v.Id}/itens/{oleo.Id}", new
+        {
+            nome = oleo.Nome, intervaloKm = 10_000, intervaloMeses = 12, ultimaKm = 48_000, ultimaData = "2025-10-01",
+            referencia = "Km",
+        });
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var item = (await r.Content.ReadFromJsonAsync<ItemManutencaoResponse>(Json))!;
+        Assert.Equal(Referencia.Km, item.Referencia);
+        Assert.Equal(Situacao.EmDia, item.Situacao);
+
+        // "por data" sem intervalo em meses é recusado
+        var invalido = await http.PutAsJsonAsync($"/api/veiculos/{v.Id}/itens/{oleo.Id}", new
+        {
+            nome = oleo.Nome, intervaloKm = 10_000, referencia = "Data",
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, invalido.StatusCode);
+    }
+
+    [Fact]
     public async Task Km_NaoPodeVoltar_EAtualizaSituacao()
     {
         var (_, http) = await CriarUsuario("248.438.034-80");

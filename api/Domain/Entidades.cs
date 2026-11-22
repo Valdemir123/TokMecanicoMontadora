@@ -80,6 +80,9 @@ public class ItemManutencao
     /// <summary>A cada quantos meses deve ser feito (nulo = não controla por tempo).</summary>
     public int? IntervaloMeses { get; set; }
 
+    /// <summary>Qual parâmetro define o vencimento (km, data ou o que vencer primeiro).</summary>
+    public Referencia Referencia { get; set; } = Referencia.Ambos;
+
     public int? UltimaKm { get; set; }
     public DateOnly? UltimaData { get; set; }
 

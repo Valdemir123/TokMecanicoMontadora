@@ -6,13 +6,16 @@ import '../api/modelos.dart';
 import '../util/formatos.dart';
 import '../widgets/comuns.dart';
 
-/// Cria um item pessoal ou ajusta um item existente (intervalos e última realização).
-/// Retorna `true` via Navigator.pop quando algo foi salvo.
+/// Cria um item pessoal ou ajusta um item existente (referência, intervalos e última realização).
+/// Retorna via Navigator.pop o [ItemManutencao] salvo, ou [ItemFormTela.removido] se foi excluído.
 class ItemFormTela extends StatefulWidget {
   const ItemFormTela({super.key, required this.veiculoId, this.item});
 
   final String veiculoId;
   final ItemManutencao? item;
+
+  /// Resultado do pop quando o item é removido.
+  static const removido = 'removido';
 
   @override
   State<ItemFormTela> createState() => _ItemFormTelaState();
@@ -26,6 +29,7 @@ class _ItemFormTelaState extends State<ItemFormTela> {
   final _intervaloMeses = TextEditingController();
   final _ultimaKm = TextEditingController();
   DateTime? _ultimaData;
+  Referencia _referencia = Referencia.ambos;
   bool _salvando = false;
   ApiException? _erro;
 
@@ -42,6 +46,7 @@ class _ItemFormTelaState extends State<ItemFormTela> {
       _intervaloMeses.text = i.intervaloMeses?.toString() ?? '';
       _ultimaKm.text = i.ultimaKm?.toString() ?? '';
       _ultimaData = i.ultimaData;
+      _referencia = i.referencia;
     }
   }
 
@@ -64,17 +69,16 @@ class _ItemFormTelaState extends State<ItemFormTela> {
       'intervaloMeses': int.tryParse(_intervaloMeses.text),
       'ultimaKm': int.tryParse(_ultimaKm.text),
       'ultimaData': _ultimaData == null ? null : dataIso(_ultimaData!),
+      'referencia': _referencia.api,
     };
 
     setState(() => _salvando = true);
     final api = Servicos.of(context).api;
     try {
-      if (_editando) {
-        await api.atualizarItem(widget.veiculoId, widget.item!.id, dados);
-      } else {
-        await api.criarItem(widget.veiculoId, dados);
-      }
-      if (mounted) Navigator.of(context).pop(true);
+      final salvo = _editando
+          ? await api.atualizarItem(widget.veiculoId, widget.item!.id, dados)
+          : await api.criarItem(widget.veiculoId, dados);
+      if (mounted) Navigator.of(context).pop(salvo);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _erro = e);
@@ -99,14 +103,39 @@ class _ItemFormTelaState extends State<ItemFormTela> {
     if (ok != true || !mounted) return;
     try {
       await Servicos.of(context).api.excluirItem(widget.veiculoId, widget.item!.id);
-      if (mounted) Navigator.of(context).pop(true);
+      if (mounted) Navigator.of(context).pop(ItemFormTela.removido);
     } on ApiException catch (e) {
       if (mounted) mostrarMensagem(context, e.mensagem, erro: true);
     }
   }
 
-  String? _semIntervalo() =>
-      _intervaloKm.text.isEmpty && _intervaloMeses.text.isEmpty ? 'Informe km, meses ou ambos' : null;
+  String? _validarKm() {
+    if (_referencia == Referencia.km && _intervaloKm.text.isEmpty) return 'Informe o intervalo em km';
+    if (_referencia == Referencia.ambos && _intervaloKm.text.isEmpty && _intervaloMeses.text.isEmpty) {
+      return 'Informe km, meses ou ambos';
+    }
+    return null;
+  }
+
+  String? _validarMeses() {
+    if (_referencia == Referencia.data && _intervaloMeses.text.isEmpty) return 'Informe o intervalo em meses';
+    if (_referencia == Referencia.ambos && _intervaloKm.text.isEmpty && _intervaloMeses.text.isEmpty) {
+      return 'Informe km, meses ou ambos';
+    }
+    return null;
+  }
+
+  static IconData _iconeReferencia(Referencia r) => switch (r) {
+        Referencia.km => Icons.speed,
+        Referencia.data => Icons.event,
+        Referencia.ambos => Icons.compare_arrows,
+      };
+
+  static String _explicacaoReferencia(Referencia r) => switch (r) {
+        Referencia.km => 'Vence só pela quilometragem; a data é ignorada.',
+        Referencia.data => 'Vence só pelo tempo; a quilometragem é ignorada.',
+        Referencia.ambos => 'Vence pelo que acontecer primeiro: o km ou a data.',
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -145,43 +174,58 @@ class _ItemFormTelaState extends State<ItemFormTela> {
                 controller: _obs,
                 decoration: const InputDecoration(labelText: 'Observação (opcional)'),
               ),
-              const TituloSecao('Repetir a cada', subtitulo: 'O que acontecer primeiro.'),
+              const TituloSecao('Controlar por', subtitulo: 'Qual parâmetro define quando este item vence.'),
+              SegmentedButton<Referencia>(
+                segments: [
+                  for (final r in [Referencia.km, Referencia.data, Referencia.ambos])
+                    ButtonSegment(value: r, label: Text(r.rotulo), icon: Icon(_iconeReferencia(r))),
+                ],
+                selected: {_referencia},
+                onSelectionChanged: (sel) => setState(() => _referencia = sel.first),
+              ),
+              const SizedBox(height: 4),
+              Text(_explicacaoReferencia(_referencia), style: Theme.of(context).textTheme.bodySmall),
+              const TituloSecao('Repetir a cada'),
               LinhaResponsiva(children: [
-                TextFormField(
-                  controller: _intervaloKm,
-                  decoration: InputDecoration(labelText: 'Km', suffixText: 'km', errorText: _erro?.erroDe('intervaloKm')),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: numeros,
-                  validator: (_) => _semIntervalo(),
-                ),
-                TextFormField(
-                  controller: _intervaloMeses,
-                  decoration: InputDecoration(
-                    labelText: 'Meses',
-                    suffixText: 'meses',
-                    errorText: _erro?.erroDe('intervaloMeses'),
+                if (_referencia.usaKm)
+                  TextFormField(
+                    controller: _intervaloKm,
+                    decoration: InputDecoration(labelText: 'Km', suffixText: 'km', errorText: _erro?.erroDe('intervaloKm')),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: numeros,
+                    validator: (_) => _validarKm(),
                   ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)],
-                  validator: (_) => _semIntervalo(),
-                ),
+                if (_referencia.usaData)
+                  TextFormField(
+                    controller: _intervaloMeses,
+                    decoration: InputDecoration(
+                      labelText: 'Meses',
+                      suffixText: 'meses',
+                      errorText: _erro?.erroDe('intervaloMeses'),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)],
+                    validator: (_) => _validarMeses(),
+                  ),
               ]),
               const TituloSecao('Última vez que foi feito',
                   subtitulo: 'Se não souber, deixe em branco. Ao registrar uma manutenção, isso é atualizado.'),
               LinhaResponsiva(children: [
-                TextFormField(
-                  controller: _ultimaKm,
-                  decoration: InputDecoration(labelText: 'Km', suffixText: 'km', errorText: _erro?.erroDe('ultimaKm')),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: numeros,
-                ),
-                CampoData(
-                  rotulo: 'Data',
-                  valor: _ultimaData,
-                  erro: _erro?.erroDe('ultimaData'),
-                  permitirLimpar: true,
-                  aoMudar: (d) => setState(() => _ultimaData = d),
-                ),
+                if (_referencia.usaKm)
+                  TextFormField(
+                    controller: _ultimaKm,
+                    decoration: InputDecoration(labelText: 'Km', suffixText: 'km', errorText: _erro?.erroDe('ultimaKm')),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: numeros,
+                  ),
+                if (_referencia.usaData)
+                  CampoData(
+                    rotulo: 'Data',
+                    valor: _ultimaData,
+                    erro: _erro?.erroDe('ultimaData'),
+                    permitirLimpar: true,
+                    aoMudar: (d) => setState(() => _ultimaData = d),
+                  ),
               ]),
               if (item?.proximaKm != null || item?.proximaData != null) ...[
                 const SizedBox(height: 16),
