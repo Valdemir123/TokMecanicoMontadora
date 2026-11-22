@@ -1,14 +1,13 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Guarda no aparelho o id do usuário cadastrado.
-/// Provisório até existir login (e-mail/senha ou código por SMS).
+/// Guarda no aparelho o token de acesso devolvido pelo login.
 class Sessao {
-  static const _chave = 'usuarioId';
+  static const _chave = 'token';
 
-  static Future<String?> usuarioId() async => (await SharedPreferences.getInstance()).getString(_chave);
+  static Future<String?> token() async => (await SharedPreferences.getInstance()).getString(_chave);
 
-  static Future<void> salvar(String id) async =>
-      (await SharedPreferences.getInstance()).setString(_chave, id);
+  static Future<void> salvar(String token) async =>
+      (await SharedPreferences.getInstance()).setString(_chave, token);
 
   static Future<void> sair() async => (await SharedPreferences.getInstance()).remove(_chave);
 }

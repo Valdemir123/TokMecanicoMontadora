@@ -8,9 +8,8 @@ import '../widgets/comuns.dart';
 
 /// Cadastro ou edição de veículo. Retorna o [Veiculo] salvo via Navigator.pop.
 class VeiculoFormTela extends StatefulWidget {
-  const VeiculoFormTela({super.key, required this.usuarioId, this.veiculo});
+  const VeiculoFormTela({super.key, this.veiculo});
 
-  final String usuarioId;
   final Veiculo? veiculo;
 
   @override
@@ -83,7 +82,7 @@ class _VeiculoFormTelaState extends State<VeiculoFormTela> {
     try {
       final v = _editando
           ? await api.atualizarVeiculo(widget.veiculo!.id, dados)
-          : await api.criarVeiculo(widget.usuarioId, dados);
+          : await api.criarVeiculo(dados);
       if (mounted) Navigator.of(context).pop(v);
     } on ApiException catch (e) {
       if (!mounted) return;

@@ -79,6 +79,17 @@ class Usuario {
       );
 }
 
+/// Resposta do login/cadastro: token de acesso + dados do usuário.
+class SessaoUsuario {
+  SessaoUsuario(this.token, this.usuario);
+
+  final String token;
+  final Usuario usuario;
+
+  factory SessaoUsuario.fromJson(Map<String, dynamic> j) =>
+      SessaoUsuario(j['token'], Usuario.fromJson(j['usuario']));
+}
+
 class Fabricante {
   Fabricante(this.nome, this.logo);
 

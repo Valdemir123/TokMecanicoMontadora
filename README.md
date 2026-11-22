@@ -30,7 +30,7 @@ cd D:\Projetos\TokMecanico\api
 dotnet run
 ```
 
-O banco `tokmecanico.db` (SQLite) é criado sozinho na primeira execução. A documentação OpenAPI fica em http://localhost:5153/openapi/v1.json, e `api/TokMecanico.Api.http` tem exemplos de chamadas.
+O banco `tokmecanico.db` (SQLite) é criado sozinho na primeira execução. Se você já tinha um banco de uma versão anterior, apague `api/tokmecanico.db` antes de rodar (a estrutura mudou com o login). A documentação OpenAPI fica em http://localhost:5153/openapi/v1.json, e `api/TokMecanico.Api.http` tem exemplos de chamadas.
 
 **Site / app** (em outro terminal):
 
@@ -55,21 +55,33 @@ cd app; flutter test
 
 ## Principais rotas da API
 
+Todas as rotas, exceto cadastro, login e catálogos, exigem o cabeçalho `Authorization: Bearer <token>`. Cada usuário só acessa os próprios dados: veículo de outra pessoa responde 404.
+
 | Método | Rota | Para quê |
 |---|---|---|
+| POST | `/api/auth/cadastro` | Cria a conta (dados + senha + aceite dos termos) e devolve o token |
+| POST | `/api/auth/login` | Entra com CPF e senha e devolve o token (limite de 10 tentativas/min por IP) |
+| GET/PUT | `/api/usuarios/me` | Ver e editar os próprios dados |
+| POST | `/api/usuarios/me/senha` | Trocar a senha |
 | GET | `/api/fabricantes` | Montadoras e logos |
-| POST/GET/PUT | `/api/usuarios`, `/api/usuarios/{id}` | Cadastro do usuário |
-| GET/POST | `/api/usuarios/{id}/veiculos` | Veículos do usuário |
+| GET/POST | `/api/veiculos` | Veículos do usuário logado |
 | GET/PUT/DELETE | `/api/veiculos/{id}` | Um veículo |
 | GET | `/api/veiculos/{id}/painel` | Itens com a situação calculada |
 | POST/PUT/DELETE | `/api/veiculos/{id}/itens[/{itemId}]` | Itens de manutenção (padrão e pessoais) |
 | GET/POST | `/api/veiculos/{id}/km` | Leituras do hodômetro |
 | GET/POST | `/api/veiculos/{id}/manutencoes` | Manutenções realizadas |
 
+### Login e segurança
+
+- Senhas guardadas só como hash PBKDF2-SHA256 com sal; mínimo de 8 caracteres, com letras e números.
+- Token JWT válido por 30 dias (`Jwt:ValidadeDias`). A chave de assinatura fica em `Jwt:Chave`: em desenvolvimento vem do `appsettings.Development.json`; **em produção, defina a variável de ambiente `Jwt__Chave`** com um valor longo e secreto (a API não sobe sem ela).
+- O aceite dos termos (LGPD) é obrigatório no cadastro e a data fica gravada.
+
 ## Pendências antes de publicar
 
-- **Login/autenticação**: hoje o app guarda o id do usuário no aparelho e a API não exige login. Como há CPF e endereço (dados pessoais, LGPD), isso precisa estar pronto antes de ir ao ar.
-- Termo de uso e consentimento (LGPD).
+- **Texto dos termos de uso e da política de privacidade**: o app mostra uma versão provisória; precisa ser revisada por um advogado.
+- **Recuperação de senha** ("Esqueci minha senha"): precisa de envio de e-mail ou SMS.
+- No celular, guardar o token em armazenamento seguro (`flutter_secure_storage`) em vez de `shared_preferences`.
 - Trocar `EnsureCreated` por migrations do EF Core e definir o banco de produção (ex.: PostgreSQL).
 
 ## Logo e imagens

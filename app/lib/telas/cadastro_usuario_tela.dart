@@ -9,10 +9,13 @@ import '../widgets/endereco_form.dart';
 
 /// Cadastro (ou edição, se [usuario] for informado) dos dados do usuário.
 class CadastroUsuarioTela extends StatefulWidget {
-  const CadastroUsuarioTela({super.key, this.usuario, this.aoConcluir});
+  const CadastroUsuarioTela({super.key, this.usuario, this.aoConcluir, this.aoIrParaLogin});
 
   final Usuario? usuario;
   final ValueChanged<Usuario>? aoConcluir;
+
+  /// Link "Já tenho conta" (só no cadastro novo).
+  final VoidCallback? aoIrParaLogin;
 
   @override
   State<CadastroUsuarioTela> createState() => _CadastroUsuarioTelaState();
@@ -26,6 +29,9 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
   final _telefone = TextEditingController();
   final _residencial = EnderecoControles();
   final _trabalho = EnderecoControles();
+  final _senha = TextEditingController();
+  final _confirma = TextEditingController();
+  bool _aceite = false;
 
   bool _salvando = false;
   ApiException? _erro;
@@ -48,7 +54,7 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
 
   @override
   void dispose() {
-    for (final c in [_cpf, _nome, _email, _telefone]) {
+    for (final c in [_cpf, _nome, _email, _telefone, _senha, _confirma]) {
       c.dispose();
     }
     _residencial.dispose();
@@ -59,6 +65,10 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
   Future<void> _salvar() async {
     setState(() => _erro = null);
     if (!_form.currentState!.validate()) return;
+    if (!_editando && !_aceite) {
+      mostrarMensagem(context, 'Para continuar, aceite os termos de uso e a política de privacidade.', erro: true);
+      return;
+    }
 
     final dados = {
       'cpf': somenteDigitos(_cpf.text),
@@ -67,15 +77,22 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
       'telefone': somenteDigitos(_telefone.text),
       'enderecoResidencial': _residencial.toJson(),
       'enderecoTrabalho': _trabalho.vazio ? null : _trabalho.toJson(),
+      if (!_editando) 'senha': _senha.text,
+      if (!_editando) 'aceiteTermos': _aceite,
     };
 
     setState(() => _salvando = true);
     final api = Servicos.of(context).api;
     try {
-      final usuario = _editando
-          ? await api.atualizarUsuario(widget.usuario!.id, dados)
-          : await api.criarUsuario(dados);
-      if (!_editando) await Sessao.salvar(usuario.id);
+      final Usuario usuario;
+      if (_editando) {
+        usuario = await api.atualizarUsuario(dados);
+      } else {
+        final sessao = await api.cadastrar(dados);
+        await Sessao.salvar(sessao.token);
+        api.token = sessao.token;
+        usuario = sessao.usuario;
+      }
       if (!mounted) return;
       mostrarMensagem(context, _editando ? 'Dados atualizados.' : 'Cadastro concluído!');
       widget.aoConcluir?.call(usuario);
@@ -160,6 +177,40 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
                 erroApi: _erro,
                 obrigatorio: false,
               ),
+              if (!_editando) ...[
+                const TituloSecao('Acesso', subtitulo: 'Você vai entrar no app com o seu CPF e esta senha.'),
+                LinhaResponsiva(children: [
+                  CampoSenha(
+                    controller: _senha,
+                    rotulo: 'Senha',
+                    erroApi: _erro?.erroDe('senha'),
+                    validator: problemaSenha,
+                  ),
+                  CampoSenha(
+                    controller: _confirma,
+                    rotulo: 'Confirmar senha',
+                    validator: (v) => v == _senha.text ? null : 'As senhas não conferem',
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  value: _aceite,
+                  onChanged: (v) => setState(() => _aceite = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: Wrap(children: [
+                    const Text('Li e aceito os '),
+                    InkWell(
+                      onTap: () => mostrarTermos(context),
+                      child: Text('termos de uso e a política de privacidade',
+                          style: TextStyle(color: cores.primary, decoration: TextDecoration.underline)),
+                    ),
+                  ]),
+                  subtitle: _erro?.erroDe('aceiteTermos') == null
+                      ? null
+                      : Text(_erro!.erroDe('aceiteTermos')!, style: TextStyle(color: cores.error)),
+                ),
+              ],
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: _salvando ? null : _salvar,
@@ -169,6 +220,10 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
                 label: Text(_editando ? 'Salvar alterações' : 'Concluir cadastro'),
                 style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               ),
+              if (!_editando && widget.aoIrParaLogin != null) ...[
+                const SizedBox(height: 8),
+                TextButton(onPressed: widget.aoIrParaLogin, child: const Text('Já tenho cadastro. Entrar')),
+              ],
               const SizedBox(height: 24),
             ]),
           ),

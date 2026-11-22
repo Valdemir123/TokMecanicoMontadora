@@ -53,7 +53,7 @@ class _PainelTelaState extends State<PainelTela> {
 
   Future<void> _editarVeiculo(Veiculo v) async {
     final salvo = await Navigator.of(context).push<Veiculo>(
-      MaterialPageRoute(builder: (_) => VeiculoFormTela(usuarioId: '', veiculo: v)),
+      MaterialPageRoute(builder: (_) => VeiculoFormTela(veiculo: v)),
     );
     if (salvo != null && mounted) _recarregar();
   }

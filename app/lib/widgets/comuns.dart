@@ -319,3 +319,66 @@ void mostrarSobre(BuildContext context) {
     ],
   );
 }
+
+/// Campo de senha com botão de mostrar/ocultar.
+class CampoSenha extends StatefulWidget {
+  const CampoSenha({super.key, required this.controller, required this.rotulo, this.validator, this.erroApi, this.aoEnviar});
+
+  final TextEditingController controller;
+  final String rotulo;
+  final FormFieldValidator<String>? validator;
+  final String? erroApi;
+  final VoidCallback? aoEnviar;
+
+  @override
+  State<CampoSenha> createState() => _CampoSenhaState();
+}
+
+class _CampoSenhaState extends State<CampoSenha> {
+  bool _oculta = true;
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+        controller: widget.controller,
+        obscureText: _oculta,
+        autocorrect: false,
+        enableSuggestions: false,
+        decoration: InputDecoration(
+          labelText: widget.rotulo,
+          errorText: widget.erroApi,
+          suffixIcon: IconButton(
+            tooltip: _oculta ? 'Mostrar senha' : 'Ocultar senha',
+            icon: Icon(_oculta ? Icons.visibility : Icons.visibility_off),
+            onPressed: () => setState(() => _oculta = !_oculta),
+          ),
+        ),
+        validator: widget.validator,
+        onFieldSubmitted: widget.aoEnviar == null ? null : (_) => widget.aoEnviar!(),
+      );
+}
+
+/// Resumo dos termos de uso e da política de privacidade.
+/// TEXTO PROVISÓRIO: precisa ser revisado por um advogado antes da publicação.
+void mostrarTermos(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Termos de uso e privacidade'),
+      content: const SingleChildScrollView(
+        child: Text(
+          'Versão provisória.\n\n'
+          'Quais dados coletamos: CPF, nome, e-mail e celular (opcionais), endereços residencial e de '
+          'trabalho, dados dos seus veículos, quilometragem e manutenções que você registrar.\n\n'
+          'Para que usamos: identificar sua conta, calcular e avisar sobre as manutenções do seu veículo e, '
+          'no futuro, sugerir oficinas e lojas próximas aos seus endereços.\n\n'
+          'Com quem compartilhamos: não vendemos seus dados. Lojas e oficinas parceiras só recebem '
+          'informações com a sua autorização.\n\n'
+          'Seus direitos (LGPD): você pode consultar, corrigir e pedir a exclusão dos seus dados a qualquer '
+          'momento pelo próprio app ou pelo nosso contato.\n\n'
+          'Segurança: sua senha é guardada de forma criptografada e o acesso aos seus dados exige login.',
+        ),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Fechar'))],
+    ),
+  );
+}

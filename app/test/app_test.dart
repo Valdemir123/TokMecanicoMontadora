@@ -34,11 +34,24 @@ Map<String, dynamic> _item(String id, String nome, String situacao, {int? kmRest
       'situacao': situacao, 'proximaKm': null, 'kmRestante': kmRestante, 'proximaData': null, 'diasRestantes': null,
     };
 
-/// API falsa que responde às rotas usadas pelo app.
+const _token = 'token-valido';
+
+/// API falsa: exige o token nas rotas protegidas e aceita a senha "segredo123".
 MockClient _apiFalsa() => MockClient((req) async {
+      http.Response json(Object corpo, [int status = 200]) => http.Response(jsonEncode(corpo), status,
+          headers: {'content-type': 'application/json; charset=utf-8'});
+
+      if (req.url.path == '/api/auth/login') {
+        final dados = jsonDecode(req.body) as Map<String, dynamic>;
+        return dados['senha'] == 'segredo123'
+            ? json({'token': _token, 'expiraEm': '2026-12-22T00:00:00Z', 'usuario': _usuario})
+            : json({'mensagem': 'CPF ou senha incorretos.'}, 401);
+      }
+      if (req.headers['Authorization'] != 'Bearer $_token') return http.Response('', 401);
+
       final rotas = <String, Object>{
-        '/api/usuarios/u1': _usuario,
-        '/api/usuarios/u1/veiculos': [_veiculo],
+        '/api/usuarios/me': _usuario,
+        '/api/veiculos': [_veiculo],
         '/api/veiculos/v1/painel': {
           'veiculo': _veiculo, 'vencidos': 1, 'proximos': 0, 'semRegistro': 1,
           'itens': [
@@ -48,8 +61,7 @@ MockClient _apiFalsa() => MockClient((req) async {
         },
       };
       final corpo = rotas[req.url.path];
-      if (corpo == null) return http.Response('', 404);
-      return http.Response(jsonEncode(corpo), 200, headers: {'content-type': 'application/json; charset=utf-8'});
+      return corpo == null ? http.Response('', 404) : json(corpo);
     });
 
 Widget _app() => TokMecanicoApp(
@@ -57,25 +69,62 @@ Widget _app() => TokMecanicoApp(
       cep: CepService(client: MockClient((_) async => http.Response('{"erro": true}', 200))),
     );
 
+Future<void> _digitar(WidgetTester tester, String rotulo, String texto) =>
+    tester.enterText(find.widgetWithText(TextFormField, rotulo), texto);
+
 void main() {
-  testWidgets('primeiro acesso abre o cadastro e valida o CPF', (tester) async {
+  testWidgets('sem login abre a tela de entrada; "Criar minha conta" abre o cadastro', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
-    expect(find.text('Bem-vindo!'), findsOneWidget);
+    expect(find.text('Entrar'), findsOneWidget);
     expect(find.bySemanticsLabel('Tok Mecânico'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextFormField, 'CPF'), '12345678900');
+
+    await tester.tap(find.text('Criar minha conta'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bem-vindo!'), findsOneWidget);
+
+    await _digitar(tester, 'CPF', '12345678900');
+    await _digitar(tester, 'Senha', 'curta');
     await tester.ensureVisible(find.text('Concluir cadastro'));
     await tester.tap(find.text('Concluir cadastro'));
     await tester.pumpAndSettle();
 
     expect(find.text('CPF inválido'), findsOneWidget);
     expect(find.text('Informe o nome completo'), findsOneWidget);
+    expect(find.text('Mínimo de 8 caracteres'), findsOneWidget);
   });
 
-  testWidgets('usuário cadastrado vê seus veículos e o painel de manutenções', (tester) async {
-    SharedPreferences.setMockInitialValues({'usuarioId': 'u1'});
+  testWidgets('senha errada mostra erro; senha certa entra e guarda o token', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+
+    await _digitar(tester, 'CPF', '52998224725');
+    await _digitar(tester, 'Senha', 'errada123');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+    expect(find.text('CPF ou senha incorretos.'), findsOneWidget);
+
+    await _digitar(tester, 'Senha', 'segredo123');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Olá, Maria!'), findsOneWidget);
+    expect((await SharedPreferences.getInstance()).getString('token'), _token);
+  });
+
+  testWidgets('token expirado volta para o login', (tester) async {
+    SharedPreferences.setMockInitialValues({'token': 'token-velho'});
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Entrar'), findsOneWidget);
+    expect((await SharedPreferences.getInstance()).getString('token'), isNull);
+  });
+
+  testWidgets('usuário logado vê seus veículos e o painel de manutenções', (tester) async {
+    SharedPreferences.setMockInitialValues({'token': _token});
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 

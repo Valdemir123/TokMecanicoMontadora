@@ -91,3 +91,10 @@ double? lerValor(String texto) {
   if (t.contains(',')) t = t.replaceAll('.', '').replaceAll(',', '.');
   return double.tryParse(t);
 }
+
+/// Mesmas regras da API: 8+ caracteres, com letras e números.
+String? problemaSenha(String? senha) {
+  if (senha == null || senha.length < 8) return 'Mínimo de 8 caracteres';
+  if (!senha.contains(RegExp(r'[A-Za-zÀ-ÿ]')) || !senha.contains(RegExp(r'\d'))) return 'Use letras e números';
+  return null;
+}

@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../api/api_client.dart';
 import '../api/modelos.dart';
 import '../util/formatos.dart';
 import '../widgets/comuns.dart';
@@ -28,13 +29,13 @@ class _VeiculosTelaState extends State<VeiculosTela> {
     _veiculos ??= _carregar();
   }
 
-  Future<List<Veiculo>> _carregar() => Servicos.of(context).api.veiculos(widget.usuario.id);
+  Future<List<Veiculo>> _carregar() => Servicos.of(context).api.veiculos();
 
   void _recarregar() => setState(() => _veiculos = _carregar());
 
   Future<void> _novoVeiculo() async {
     final criado = await Navigator.of(context).push<Veiculo>(
-      MaterialPageRoute(builder: (_) => VeiculoFormTela(usuarioId: widget.usuario.id)),
+      MaterialPageRoute(builder: (_) => const VeiculoFormTela()),
     );
     if (criado == null || !mounted) return;
     _recarregar();
@@ -44,6 +45,11 @@ class _VeiculosTelaState extends State<VeiculosTela> {
   Future<void> _abrirPainel(Veiculo v) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PainelTela(veiculoId: v.id)));
     if (mounted) _recarregar();
+  }
+
+  Future<void> _trocarSenha() async {
+    final ok = await showDialog<bool>(context: context, builder: (_) => const _DialogoTrocaSenha());
+    if (ok == true && mounted) mostrarMensagem(context, 'Senha alterada.');
   }
 
   void _meusDados() {
@@ -73,13 +79,15 @@ class _VeiculosTelaState extends State<VeiculosTela> {
             onSelected: (op) => switch (op) {
               'dados' => _meusDados(),
               'sobre' => mostrarSobre(context),
+              'senha' => _trocarSenha(),
               _ => widget.aoSair(),
             },
             itemBuilder: (_) => [
               PopupMenuItem(enabled: false, child: Text(widget.usuario.nomeCompleto)),
               const PopupMenuItem(value: 'dados', child: Text('Meus dados')),
+              const PopupMenuItem(value: 'senha', child: Text('Trocar senha')),
               const PopupMenuItem(value: 'sobre', child: Text('Sobre o Tok Mecânico')),
-              const PopupMenuItem(value: 'sair', child: Text('Sair deste aparelho')),
+              const PopupMenuItem(value: 'sair', child: Text('Sair')),
             ],
           ),
         ],
@@ -159,5 +167,60 @@ class _Vazio extends StatelessWidget {
             FilledButton.icon(onPressed: aoAdicionar, icon: const Icon(Icons.add), label: const Text('Cadastrar veículo')),
           ]),
         ),
+      );
+}
+
+class _DialogoTrocaSenha extends StatefulWidget {
+  const _DialogoTrocaSenha();
+
+  @override
+  State<_DialogoTrocaSenha> createState() => _DialogoTrocaSenhaState();
+}
+
+class _DialogoTrocaSenhaState extends State<_DialogoTrocaSenha> {
+  final _form = GlobalKey<FormState>();
+  final _atual = TextEditingController();
+  final _nova = TextEditingController();
+  ApiException? _erro;
+  bool _salvando = false;
+
+  @override
+  void dispose() {
+    _atual.dispose();
+    _nova.dispose();
+    super.dispose();
+  }
+
+  Future<void> _salvar() async {
+    setState(() => _erro = null);
+    if (!_form.currentState!.validate()) return;
+    setState(() => _salvando = true);
+    try {
+      await Servicos.of(context).api.trocarSenha(_atual.text, _nova.text);
+      if (mounted) Navigator.of(context).pop(true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erro = e);
+    } finally {
+      if (mounted) setState(() => _salvando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('Trocar senha'),
+        content: Form(
+          key: _form,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            CampoSenha(controller: _atual, rotulo: 'Senha atual', erroApi: _erro?.erroDe('senhaAtual'),
+                validator: (v) => (v ?? '').isEmpty ? 'Informe a senha atual' : null),
+            const SizedBox(height: 12),
+            CampoSenha(controller: _nova, rotulo: 'Nova senha', erroApi: _erro?.erroDe('novaSenha'),
+                validator: problemaSenha),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
+          FilledButton(onPressed: _salvando ? null : _salvar, child: const Text('Salvar')),
+        ],
       );
 }

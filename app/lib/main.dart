@@ -4,6 +4,7 @@ import 'api/api_client.dart';
 import 'api/cep_service.dart';
 import 'api/modelos.dart';
 import 'telas/cadastro_usuario_tela.dart';
+import 'telas/login_tela.dart';
 import 'telas/veiculos_tela.dart';
 import 'util/sessao.dart';
 import 'widgets/comuns.dart';
@@ -42,7 +43,7 @@ class TokMecanicoApp extends StatelessWidget {
   }
 }
 
-/// Decide entre o cadastro (primeiro acesso) e a lista de veículos.
+/// Decide entre login, cadastro e a lista de veículos.
 class Inicio extends StatefulWidget {
   const Inicio({super.key});
 
@@ -52,6 +53,7 @@ class Inicio extends StatefulWidget {
 
 class _InicioState extends State<Inicio> {
   bool _carregando = true;
+  bool _criandoConta = false;
   Usuario? _usuario;
   Object? _erro;
 
@@ -68,15 +70,17 @@ class _InicioState extends State<Inicio> {
       _erro = null;
     });
     final api = Servicos.of(context).api;
+    api.aoPerderSessao = _sessaoExpirada;
     try {
-      final id = await Sessao.usuarioId();
+      final token = await Sessao.token();
       Usuario? usuario;
-      if (id != null) {
+      if (token != null) {
+        api.token = token;
         try {
-          usuario = await api.usuario(id);
+          usuario = await api.eu();
         } on ApiException catch (e) {
-          if (e.status != 404) rethrow;
-          await Sessao.sair(); // cadastro não existe mais no servidor
+          if (e.status != 401) rethrow;
+          await _limparSessao(); // token expirado ou inválido
         }
       }
       if (!mounted) return;
@@ -94,10 +98,27 @@ class _InicioState extends State<Inicio> {
     }
   }
 
-  Future<void> _sair() async {
+  Future<void> _limparSessao() async {
     await Sessao.sair();
+    if (mounted) Servicos.of(context).api.token = null;
+  }
+
+  Future<void> _sair() async {
+    await _limparSessao();
     if (mounted) setState(() => _usuario = null);
   }
+
+  void _sessaoExpirada() {
+    if (_usuario == null || !mounted) return;
+    _sair();
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    mostrarMensagem(context, 'Sua sessão expirou. Entre novamente.', erro: true);
+  }
+
+  void _entrou(Usuario u) => setState(() {
+        _usuario = u;
+        _criandoConta = false;
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +127,9 @@ class _InicioState extends State<Inicio> {
 
     final usuario = _usuario;
     if (usuario == null) {
-      return CadastroUsuarioTela(aoConcluir: (u) => setState(() => _usuario = u));
+      return _criandoConta
+          ? CadastroUsuarioTela(aoConcluir: _entrou, aoIrParaLogin: () => setState(() => _criandoConta = false))
+          : LoginTela(aoEntrar: _entrou, aoCriarConta: () => setState(() => _criandoConta = true));
     }
     return VeiculosTela(
       key: ValueKey(usuario.id),

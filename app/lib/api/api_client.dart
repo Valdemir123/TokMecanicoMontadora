@@ -27,28 +27,40 @@ class ApiClient {
   final http.Client _http;
   final String baseUrl;
 
+  /// Token do usuário logado; enviado em todas as chamadas.
+  String? token;
+
+  /// Chamado quando a API recusa o token (expirado ou inválido) para o app voltar ao login.
+  void Function()? aoPerderSessao;
+
   // ---------- Catálogos ----------
 
   Future<List<Fabricante>> fabricantes() async =>
       (await _get('/api/fabricantes') as List).map((e) => Fabricante.fromJson(e)).toList();
 
-  // ---------- Usuário ----------
+  // ---------- Login e usuário ----------
 
-  Future<Usuario> criarUsuario(Map<String, dynamic> dados) async =>
-      Usuario.fromJson(await _send('POST', '/api/usuarios', dados));
+  Future<SessaoUsuario> cadastrar(Map<String, dynamic> dados) async =>
+      SessaoUsuario.fromJson(await _send('POST', '/api/auth/cadastro', dados));
 
-  Future<Usuario> atualizarUsuario(String id, Map<String, dynamic> dados) async =>
-      Usuario.fromJson(await _send('PUT', '/api/usuarios/$id', dados));
+  Future<SessaoUsuario> entrar(String cpf, String senha) async =>
+      SessaoUsuario.fromJson(await _send('POST', '/api/auth/login', {'cpf': cpf, 'senha': senha}));
 
-  Future<Usuario> usuario(String id) async => Usuario.fromJson(await _get('/api/usuarios/$id'));
+  Future<Usuario> eu() async => Usuario.fromJson(await _get('/api/usuarios/me'));
+
+  Future<Usuario> atualizarUsuario(Map<String, dynamic> dados) async =>
+      Usuario.fromJson(await _send('PUT', '/api/usuarios/me', dados));
+
+  Future<void> trocarSenha(String atual, String nova) =>
+      _send('POST', '/api/usuarios/me/senha', {'senhaAtual': atual, 'novaSenha': nova});
 
   // ---------- Veículos ----------
 
-  Future<List<Veiculo>> veiculos(String usuarioId) async =>
-      (await _get('/api/usuarios/$usuarioId/veiculos') as List).map((e) => Veiculo.fromJson(e)).toList();
+  Future<List<Veiculo>> veiculos() async =>
+      (await _get('/api/veiculos') as List).map((e) => Veiculo.fromJson(e)).toList();
 
-  Future<Veiculo> criarVeiculo(String usuarioId, Map<String, dynamic> dados) async =>
-      Veiculo.fromJson(await _send('POST', '/api/usuarios/$usuarioId/veiculos', dados));
+  Future<Veiculo> criarVeiculo(Map<String, dynamic> dados) async =>
+      Veiculo.fromJson(await _send('POST', '/api/veiculos', dados));
 
   Future<Veiculo> atualizarVeiculo(String id, Map<String, dynamic> dados) async =>
       Veiculo.fromJson(await _send('PUT', '/api/veiculos/$id', dados));
@@ -87,6 +99,7 @@ class ApiClient {
   Future<dynamic> _send(String metodo, String caminho, [Map<String, dynamic>? corpo]) async {
     final req = http.Request(metodo, Uri.parse('$baseUrl$caminho'))
       ..headers['Accept'] = 'application/json';
+    if (token != null) req.headers['Authorization'] = 'Bearer $token';
     if (corpo != null) {
       req.headers['Content-Type'] = 'application/json';
       req.body = jsonEncode(corpo);
@@ -102,6 +115,11 @@ class ApiClient {
     final texto = utf8.decode(resp.bodyBytes);
     final json = texto.isEmpty ? null : jsonDecode(texto);
     if (resp.statusCode >= 200 && resp.statusCode < 300) return json;
+    // 401 fora do login = token expirado/inválido: volta para a tela de login.
+    if (resp.statusCode == 401 && token != null && !caminho.startsWith('/api/auth/')) aoPerderSessao?.call();
+    if (resp.statusCode == 429) {
+      throw ApiException('Muitas tentativas. Aguarde um minuto e tente de novo.', status: 429);
+    }
 
     throw _erro(resp.statusCode, json);
   }
