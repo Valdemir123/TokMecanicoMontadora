@@ -75,4 +75,4 @@ cd app; flutter test
 ## Logo e imagens
 
 - Logo próprio (carro de frente em linhas azuis com um checklist no para-brisa + nome "Tok Mecânico" em Montserrat) e ícones: `app/assets/logo/` (SVG + PNG). Desenho original do projeto.
-- Mascote: `app/assets/mascote/mecanico.svg` / `.png` — caricatura do fundador vetorizada, de macacão, com chave e pneu. Desenho próprio do projeto.
+- Mascote: `app/assets/mascote/mecanico.png` — caricatura do fundador como mecânico, gerada por IA a partir do rosto dele (fundo removido). Imagem própria do projeto.

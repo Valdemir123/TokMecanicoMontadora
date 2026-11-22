@@ -251,7 +251,7 @@ class LogoTok extends StatelessWidget {
   }
 }
 
-/// Mascote do Tok Mecânico: caricatura do fundador, de macacão, com chave e pneu.
+/// Mascote do Tok Mecânico: caricatura do fundador como mecânico, com chave inglesa.
 class Mascote extends StatelessWidget {
   const Mascote({super.key, this.altura = 140});
 
