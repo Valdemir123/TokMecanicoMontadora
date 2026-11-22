@@ -20,3 +20,8 @@ key.properties
 *.swp
 .DS_Store
 Thumbs.db
+
+# Banco SQLite local da API
+*.db
+*.db-shm
+*.db-wal

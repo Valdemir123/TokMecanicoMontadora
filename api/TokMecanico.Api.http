@@ -1,6 +1,35 @@
-@TokMecanico.Api_HostAddress = http://localhost:5153
+@api = http://localhost:5153
 
-GET {{TokMecanico.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Fabricantes (com o nome do arquivo de logo)
+GET {{api}}/api/fabricantes
 
-###
+### Catálogo de itens padrão de manutenção
+GET {{api}}/api/catalogo-manutencoes
+
+### Cadastro de usuário
+# @name usuario
+POST {{api}}/api/usuarios
+Content-Type: application/json
+
+{
+  "cpf": "529.982.247-25",
+  "nomeCompleto": "Maria da Silva",
+  "enderecoResidencial": { "cep": "01310-100", "logradouro": "Av. Paulista", "numero": "1000", "bairro": "Bela Vista", "cidade": "São Paulo", "uf": "SP" },
+  "enderecoTrabalho": { "cep": "20040-020", "logradouro": "Av. Rio Branco", "numero": "1", "bairro": "Centro", "cidade": "Rio de Janeiro", "uf": "RJ" }
+}
+
+### Cadastro de veículo
+# @name veiculo
+POST {{api}}/api/usuarios/{{usuario.response.body.id}}/veiculos
+Content-Type: application/json
+
+{ "placa": "BRA2E19", "fabricante": "Fiat", "modelo": "Argo 1.0", "anoFabricacao": 2021, "cor": "Prata", "kmAtual": 50000 }
+
+### Painel de manutenções do veículo
+GET {{api}}/api/veiculos/{{veiculo.response.body.id}}/painel
+
+### Registrar km
+POST {{api}}/api/veiculos/{{veiculo.response.body.id}}/km
+Content-Type: application/json
+
+{ "km": 51200 }

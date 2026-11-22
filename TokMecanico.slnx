@@ -2,4 +2,7 @@
   <Folder Name="/api/">
     <Project Path="api/TokMecanico.Api.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TokMecanico.Api.Tests/TokMecanico.Api.Tests.csproj" />
+  </Folder>
 </Solution>

@@ -1,0 +1,82 @@
+using TokMecanico.Api.Domain;
+
+namespace TokMecanico.Api.Contracts;
+
+// ---------- Entrada ----------
+
+public record EnderecoRequest(
+    string? Cep, string? Logradouro, string? Numero, string? Complemento,
+    string? Bairro, string? Cidade, string? Uf);
+
+public record UsuarioRequest(
+    string? Cpf, string? NomeCompleto, string? Email, string? Telefone,
+    EnderecoRequest? EnderecoResidencial, EnderecoRequest? EnderecoTrabalho);
+
+public record VeiculoRequest(
+    string? Placa, string? Fabricante, string? Modelo, int? AnoFabricacao, string? Cor, int? KmAtual);
+
+public record ItemManutencaoRequest(
+    string? Nome, string? Observacao, int? IntervaloKm, int? IntervaloMeses,
+    int? UltimaKm, DateOnly? UltimaData);
+
+public record RegistroKmRequest(int? Km, DateOnly? Data);
+
+public record ManutencaoRequest(
+    DateOnly? Data, int? Km, List<Guid>? ItensIds, string? Descricao, decimal? Valor, string? Oficina);
+
+// ---------- Saída ----------
+
+public record EnderecoResponse(
+    string Cep, string Logradouro, string Numero, string? Complemento,
+    string Bairro, string Cidade, string Uf)
+{
+    public static EnderecoResponse? De(Endereco? e) => e is null
+        ? null
+        : new(e.Cep, e.Logradouro, e.Numero, e.Complemento, e.Bairro, e.Cidade, e.Uf);
+}
+
+public record UsuarioResponse(
+    Guid Id, string Cpf, string NomeCompleto, string? Email, string? Telefone,
+    EnderecoResponse EnderecoResidencial, EnderecoResponse? EnderecoTrabalho, DateTime CriadoEm)
+{
+    public static UsuarioResponse De(Usuario u) => new(
+        u.Id, u.Cpf, u.NomeCompleto, u.Email, u.Telefone,
+        EnderecoResponse.De(u.EnderecoResidencial)!, EnderecoResponse.De(u.EnderecoTrabalho), u.CriadoEm);
+}
+
+public record VeiculoResponse(
+    Guid Id, Guid UsuarioId, string Placa, string Fabricante, string? FabricanteLogo, string Modelo,
+    int AnoFabricacao, string Cor, int KmAtual, DateOnly? DataKmAtual)
+{
+    public static VeiculoResponse De(Veiculo v) => new(
+        v.Id, v.UsuarioId, v.Placa, v.Fabricante,
+        Catalogos.Fabricantes.FirstOrDefault(f => f.Nome == v.Fabricante)?.Logo,
+        v.Modelo, v.AnoFabricacao, v.Cor, v.KmAtual, v.DataKmAtual);
+}
+
+public record ItemManutencaoResponse(
+    Guid Id, string? CodigoCatalogo, string Nome, string? Observacao, bool Personalizado,
+    int? IntervaloKm, int? IntervaloMeses, int? UltimaKm, DateOnly? UltimaData,
+    Situacao Situacao, int? ProximaKm, int? KmRestante, DateOnly? ProximaData, int? DiasRestantes)
+{
+    public static ItemManutencaoResponse De(ItemManutencao i, int kmAtual, DateOnly hoje)
+    {
+        var s = StatusManutencao.Calcular(i, kmAtual, hoje);
+        return new(i.Id, i.CodigoCatalogo, i.Nome, i.Observacao, i.Personalizado,
+            i.IntervaloKm, i.IntervaloMeses, i.UltimaKm, i.UltimaData,
+            s.Situacao, s.ProximaKm, s.KmRestante, s.ProximaData, s.DiasRestantes);
+    }
+}
+
+public record PainelResponse(
+    VeiculoResponse Veiculo, int Vencidos, int Proximos, int SemRegistro,
+    List<ItemManutencaoResponse> Itens);
+
+public record RegistroKmResponse(Guid Id, int Km, DateOnly Data)
+{
+    public static RegistroKmResponse De(RegistroKm r) => new(r.Id, r.Km, r.Data);
+}
+
+public record ManutencaoResponse(
+    Guid Id, DateOnly Data, int Km, List<Guid> ItensIds, List<string> Itens,
+    string? Descricao, decimal? Valor, string? Oficina);

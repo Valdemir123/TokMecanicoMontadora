@@ -1,41 +1,53 @@
+using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+using TokMecanico.Api.Data;
+using TokMecanico.Api.Domain;
+using TokMecanico.Api.Endpoints;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+builder.Services.AddSingleton(TimeProvider.System);
+
+builder.Services.AddDbContext<TokMecanicoDbContext>(o =>
+    o.UseSqlite(builder.Configuration.GetConnectionString("TokMecanico")));
+
+builder.Services.ConfigureHttpJsonOptions(o =>
+    o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+// O site (Flutter Web) roda em outra origem; as origens liberadas ficam em "Cors:Origens".
+var origens = builder.Configuration.GetSection("Cors:Origens").Get<string[]>() ?? [];
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+{
+    if (origens.Contains("*")) p.AllowAnyOrigin();
+    else p.WithOrigins(origens);
+    p.AllowAnyHeader().AllowAnyMethod();
+}));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// MVP: cria o banco na primeira execução. Trocar por migrations antes de ir para produção.
+using (var scope = app.Services.CreateScope())
+    scope.ServiceProvider.GetRequiredService<TokMecanicoDbContext>().Database.EnsureCreated();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-
-app.UseHttpsRedirection();
-
-var summaries = new[]
+else
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    app.UseHttpsRedirection();
+}
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.UseCors();
+
+app.MapGet("/api/fabricantes", () => Catalogos.Fabricantes).WithTags("Catálogos");
+app.MapGet("/api/catalogo-manutencoes", () => Catalogos.ItensPadrao).WithTags("Catálogos");
+app.MapUsuarios();
+app.MapVeiculos();
+app.MapManutencoes();
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+public partial class Program;
