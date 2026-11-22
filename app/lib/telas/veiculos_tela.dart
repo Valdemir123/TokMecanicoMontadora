@@ -38,8 +38,9 @@ class _VeiculosTelaState extends State<VeiculosTela> {
       MaterialPageRoute(builder: (_) => const VeiculoFormTela()),
     );
     if (criado == null || !mounted) return;
+    // Volta para a lista já atualizada; o usuário escolhe o veículo para ver as manutenções.
     _recarregar();
-    _abrirPainel(criado);
+    mostrarMensagem(context, 'Veículo cadastrado! Toque nele para ver as manutenções.');
   }
 
   Future<void> _abrirPainel(Veiculo v) async {
@@ -117,6 +118,17 @@ class _VeiculosTelaState extends State<VeiculosTela> {
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     const Text('Seus veículos'),
+                    if (veiculos.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        Icon(Icons.touch_app, size: 18, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text('Selecione o veículo para ver os detalhes das manutenções.',
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                        ),
+                      ]),
+                    ],
                     const SizedBox(height: 16),
                     if (veiculos.isEmpty) _Vazio(aoAdicionar: _novoVeiculo),
                     for (final v in veiculos)

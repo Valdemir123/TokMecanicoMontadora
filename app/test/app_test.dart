@@ -130,6 +130,7 @@ void main() {
 
     expect(find.text('Olá, Maria!'), findsOneWidget);
     expect(find.text('Fiat Argo 1.0'), findsOneWidget);
+    expect(find.text('Selecione o veículo para ver os detalhes das manutenções.'), findsOneWidget);
 
     await tester.tap(find.text('Fiat Argo 1.0'));
     await tester.pumpAndSettle();
