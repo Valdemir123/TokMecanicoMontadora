@@ -74,5 +74,5 @@ cd app; flutter test
 
 ## Logo e imagens
 
-- Logo (checklist + carro + nome) e ícones: `app/assets/logo/` (SVG + PNG). Desenho recriado a partir de um modelo do Turbologo — confirmar a licença do plano antes de registrar a marca.
+- Logo próprio (carro de frente em linhas azuis com um checklist no para-brisa + nome "Tok Mecânico" em Montserrat) e ícones: `app/assets/logo/` (SVG + PNG). Desenho original do projeto.
 - Mascote (mecânico): `app/assets/mascote/mecanico.png`, ilustração do **Freepik**. A licença do Freepik **não permite uso como logo/marca**; ele é usado só dentro do app, com crédito na tela "Sobre o Tok Mecânico" (obrigatório na licença gratuita).
