@@ -100,7 +100,9 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
             key: _form,
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               if (!_editando) ...[
-                Text('Bem-vindo ao Tok Mecânico',
+                const Center(child: LogoTok(altura: 150)),
+                const SizedBox(height: 24),
+                Text('Bem-vindo!',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text('Cadastre-se para controlar as manutenções do seu veículo.',

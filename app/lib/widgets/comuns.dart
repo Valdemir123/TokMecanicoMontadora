@@ -228,3 +228,25 @@ class CampoData extends StatelessWidget {
     );
   }
 }
+
+/// Logo do Tok Mecânico; usa a versão branca no tema escuro.
+class LogoTok extends StatelessWidget {
+  const LogoTok({super.key, this.altura = 140, this.soSimbolo = false});
+
+  final double altura;
+
+  /// Só o desenho (checklist + carro), sem o nome.
+  final bool soSimbolo;
+
+  @override
+  Widget build(BuildContext context) {
+    final escuro = Theme.of(context).brightness == Brightness.dark;
+    final nome = soSimbolo ? 'simbolo' : 'logo-vertical';
+    return Image.asset(
+      'assets/logo/$nome${escuro ? '-branco' : ''}.png',
+      height: altura,
+      fit: BoxFit.contain,
+      semanticLabel: 'Tok Mecânico',
+    );
+  }
+}

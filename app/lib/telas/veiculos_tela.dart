@@ -62,7 +62,11 @@ class _VeiculosTelaState extends State<VeiculosTela> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tok Mecânico'),
+        title: const Row(mainAxisSize: MainAxisSize.min, children: [
+          LogoTok(altura: 32, soSimbolo: true),
+          SizedBox(width: 10),
+          Text('Tok Mecânico'),
+        ]),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.account_circle),

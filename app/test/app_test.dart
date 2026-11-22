@@ -63,7 +63,8 @@ void main() {
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
-    expect(find.text('Bem-vindo ao Tok Mecânico'), findsOneWidget);
+    expect(find.text('Bem-vindo!'), findsOneWidget);
+    expect(find.bySemanticsLabel('Tok Mecânico'), findsOneWidget);
     await tester.enterText(find.widgetWithText(TextFormField, 'CPF'), '12345678900');
     await tester.ensureVisible(find.text('Concluir cadastro'));
     await tester.tap(find.text('Concluir cadastro'));
