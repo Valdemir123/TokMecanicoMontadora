@@ -8,9 +8,15 @@ public record EnderecoRequest(
     string? Cep, string? Logradouro, string? Numero, string? Complemento,
     string? Bairro, string? Cidade, string? Uf);
 
+/// <summary>Cadastro e edição de dados. Senha e aceite dos termos só são usados no cadastro.</summary>
 public record UsuarioRequest(
     string? Cpf, string? NomeCompleto, string? Email, string? Telefone,
-    EnderecoRequest? EnderecoResidencial, EnderecoRequest? EnderecoTrabalho);
+    EnderecoRequest? EnderecoResidencial, EnderecoRequest? EnderecoTrabalho,
+    string? Senha = null, bool AceiteTermos = false);
+
+public record LoginRequest(string? Cpf, string? Senha);
+
+public record TrocaSenhaRequest(string? SenhaAtual, string? NovaSenha);
 
 public record VeiculoRequest(
     string? Placa, string? Fabricante, string? Modelo, int? AnoFabricacao, string? Cor, int? KmAtual);
@@ -43,6 +49,8 @@ public record UsuarioResponse(
         u.Id, u.Cpf, u.NomeCompleto, u.Email, u.Telefone,
         EnderecoResponse.De(u.EnderecoResidencial)!, EnderecoResponse.De(u.EnderecoTrabalho), u.CriadoEm);
 }
+
+public record SessaoResponse(string Token, DateTime ExpiraEm, UsuarioResponse Usuario);
 
 public record VeiculoResponse(
     Guid Id, Guid UsuarioId, string Placa, string Fabricante, string? FabricanteLogo, string Modelo,

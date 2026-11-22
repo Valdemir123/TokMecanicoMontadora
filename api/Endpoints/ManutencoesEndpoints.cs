@@ -10,7 +10,8 @@ public static class ManutencoesEndpoints
 {
     public static void MapManutencoes(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/veiculos/{veiculoId:guid}").WithTags("Manutenções");
+        var g = app.MapGroup("/api/veiculos/{veiculoId:guid}").WithTags("Manutenções")
+            .SomenteVeiculoDoUsuario("veiculoId");
 
         // ---------- Itens (padrão e pessoais) ----------
 

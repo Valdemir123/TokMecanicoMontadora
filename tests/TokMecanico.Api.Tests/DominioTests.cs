@@ -88,3 +88,24 @@ public class StatusManutencaoTests
         Assert.Null(s.KmRestante);
     }
 }
+
+public class SenhasTests
+{
+    [Fact]
+    public void HashConfereSoComASenhaCerta()
+    {
+        var hash = Senhas.Gerar("minhaSenha1");
+        Assert.DoesNotContain("minhaSenha1", hash);
+        Assert.True(Senhas.Conferir("minhaSenha1", hash));
+        Assert.False(Senhas.Conferir("minhaSenha2", hash));
+        Assert.NotEqual(hash, Senhas.Gerar("minhaSenha1")); // sal aleatório
+    }
+
+    [Theory]
+    [InlineData("abc12345", true)]
+    [InlineData("abc1234", false)]
+    [InlineData("abcdefgh", false)]
+    [InlineData("12345678", false)]
+    [InlineData(null, false)]
+    public void RegrasDaSenha(string? senha, bool valida) => Assert.Equal(valida, Senhas.Problema(senha) is null);
+}

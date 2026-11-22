@@ -11,19 +11,20 @@ public static class VeiculosEndpoints
 
     public static void MapVeiculos(this IEndpointRouteBuilder app)
     {
-        var porUsuario = app.MapGroup("/api/usuarios/{usuarioId:guid}/veiculos").WithTags("Veículos");
+        // Veículos do usuário logado.
+        var meus = app.MapGroup("/api/veiculos").WithTags("Veículos").RequireAuthorization();
 
-        porUsuario.MapGet("/", async (Guid usuarioId, TokMecanicoDbContext db) =>
+        meus.MapGet("/", async (HttpContext http, TokMecanicoDbContext db) =>
         {
-            if (!await db.Usuarios.AnyAsync(u => u.Id == usuarioId)) return Results.NotFound();
+            var usuarioId = http.User.UsuarioId();
             var veiculos = await db.Veiculos.Where(v => v.UsuarioId == usuarioId)
                 .OrderBy(v => v.CriadoEm).ToListAsync();
             return Results.Ok(veiculos.Select(VeiculoResponse.De));
         });
 
-        porUsuario.MapPost("/", async (Guid usuarioId, VeiculoRequest req, TokMecanicoDbContext db, TimeProvider relogio) =>
+        meus.MapPost("/", async (HttpContext http, VeiculoRequest req, TokMecanicoDbContext db, TimeProvider relogio) =>
         {
-            if (!await db.Usuarios.AnyAsync(u => u.Id == usuarioId)) return Results.NotFound();
+            var usuarioId = http.User.UsuarioId();
 
             var erros = Validar(req, relogio);
             if (erros.Tem) return erros.Resultado();
@@ -55,7 +56,7 @@ public static class VeiculosEndpoints
             return Results.Created($"/api/veiculos/{veiculo.Id}", VeiculoResponse.De(veiculo));
         });
 
-        var g = app.MapGroup("/api/veiculos/{id:guid}").WithTags("Veículos");
+        var g = app.MapGroup("/api/veiculos/{id:guid}").WithTags("Veículos").SomenteVeiculoDoUsuario("id");
 
         g.MapGet("/", async (Guid id, TokMecanicoDbContext db) =>
             await db.Veiculos.FindAsync(id) is { } v ? Results.Ok(VeiculoResponse.De(v)) : Results.NotFound());

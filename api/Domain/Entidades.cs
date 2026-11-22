@@ -13,6 +13,12 @@ public class Usuario
     public Endereco EnderecoResidencial { get; set; } = new();
     public Endereco? EnderecoTrabalho { get; set; }
 
+    /// <summary>Hash PBKDF2 da senha (ver <see cref="Senhas"/>). Nunca a senha em texto.</summary>
+    public string SenhaHash { get; set; } = "";
+
+    /// <summary>Quando o usuário aceitou os termos de uso e a política de privacidade (LGPD).</summary>
+    public DateTime? AceiteTermosEm { get; set; }
+
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 
     public List<Veiculo> Veiculos { get; set; } = [];

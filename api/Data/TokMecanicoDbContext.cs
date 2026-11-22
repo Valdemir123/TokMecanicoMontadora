@@ -21,6 +21,7 @@ public class TokMecanicoDbContext(DbContextOptions<TokMecanicoDbContext> options
             e.Property(u => u.NomeCompleto).HasMaxLength(150).IsRequired();
             e.Property(u => u.Email).HasMaxLength(200);
             e.Property(u => u.Telefone).HasMaxLength(20);
+            e.Property(u => u.SenhaHash).HasMaxLength(200).IsRequired();
             e.OwnsOne(u => u.EnderecoResidencial, ConfigurarEndereco);
             e.OwnsOne(u => u.EnderecoTrabalho, ConfigurarEndereco);
             e.HasMany(u => u.Veiculos).WithOne(v => v.Usuario).HasForeignKey(v => v.UsuarioId)
