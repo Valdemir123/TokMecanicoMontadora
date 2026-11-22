@@ -251,8 +251,7 @@ class LogoTok extends StatelessWidget {
   }
 }
 
-/// Mascote do Tok Mecânico (mecânico com chave e pneu).
-/// Ilustração do Freepik: o crédito fica na tela "Sobre" (ver [mostrarSobre]).
+/// Mascote do Tok Mecânico: caricatura do fundador, de macacão, com chave e pneu.
 class Mascote extends StatelessWidget {
   const Mascote({super.key, this.altura = 140});
 
@@ -306,7 +305,7 @@ class RecadoMascote extends StatelessWidget {
   }
 }
 
-/// Tela "Sobre", com os créditos exigidos pela licença do mascote (Freepik).
+/// Tela "Sobre o Tok Mecânico".
 void mostrarSobre(BuildContext context) {
   showAboutDialog(
     context: context,
@@ -316,9 +315,7 @@ void mostrarSobre(BuildContext context) {
     applicationLegalese: 'Controle de manutenções do seu veículo.',
     children: const [
       SizedBox(height: 16),
-      Text('Créditos', style: TextStyle(fontWeight: FontWeight.bold)),
-      SizedBox(height: 4),
-      Text('Ilustração do mascote: Freepik (freepik.com)'),
+      Center(child: Mascote(altura: 120)),
     ],
   );
 }
