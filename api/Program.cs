@@ -67,6 +67,13 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<TokMecanicoDbContext>();
     db.Database.EnsureCreated();
     AjustesDeEsquema.Aplicar(db);
+
+    // Comando de administrador (no servidor): dotnet run -- redefinir-senha <cpf> <nova-senha>
+    if (args is ["redefinir-senha", var cpfArg, var novaSenha])
+    {
+        Environment.ExitCode = Administracao.RedefinirSenha(db, cpfArg, novaSenha);
+        return;
+    }
 }
 
 if (app.Environment.IsDevelopment())

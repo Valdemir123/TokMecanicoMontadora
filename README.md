@@ -76,6 +76,8 @@ Todas as rotas, exceto cadastro, login e catálogos, exigem o cabeçalho `Author
 - Senhas guardadas só como hash PBKDF2-SHA256 com sal; mínimo de 8 caracteres, com letras e números.
 - Token JWT válido por 30 dias (`Jwt:ValidadeDias`). A chave de assinatura fica em `Jwt:Chave`: em desenvolvimento vem do `appsettings.Development.json`; **em produção, defina a variável de ambiente `Jwt__Chave`** com um valor longo e secreto (a API não sobe sem ela).
 - O aceite dos termos (LGPD) é obrigatório no cadastro e a data fica gravada.
+- **Redefinir a senha de alguém** (enquanto não existe "Esqueci minha senha"): com a API parada, na pasta `api`:
+  `dotnet run -- redefinir-senha 529.982.247-25 NovaSenha123`
 
 ## Pendências antes de publicar
 
