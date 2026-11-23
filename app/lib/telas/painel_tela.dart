@@ -165,19 +165,12 @@ class _PainelTelaState extends State<PainelTela> {
               ],
             ],
           ),
-          floatingActionButton: p == null
-              ? null
-              : FloatingActionButton.extended(
-                  onPressed: () => _abrir(ManutencaoFormTela(veiculo: p.veiculo, itens: p.itens)),
-                  icon: const Icon(Icons.build),
-                  label: const Text('Revisão periódica'),
-                ),
           body: switch (snap) {
             AsyncSnapshot(hasError: true, :final error?) => ErroCarregar(erro: error, tentarDeNovo: _recarregar),
             AsyncSnapshot(:final data?) => RefreshIndicator(
                 onRefresh: () async => _recarregar(),
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                   children: [Conteudo(child: _corpo(data))],
                 ),
               ),
@@ -214,6 +207,13 @@ class _PainelTelaState extends State<PainelTela> {
             ),
           ]),
         ),
+      ),
+      const SizedBox(height: 12),
+      FilledButton.icon(
+        onPressed: () => _abrir(ManutencaoFormTela(veiculo: p.veiculo, itens: p.itens)),
+        icon: const Icon(Icons.build),
+        label: const Text('Registrar revisão periódica'),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), textStyle: const TextStyle(fontSize: 16)),
       ),
       if (_proximaRevisao(p) case final proxima?) ...[
         const SizedBox(height: 12),
