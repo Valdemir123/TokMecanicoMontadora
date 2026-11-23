@@ -97,11 +97,6 @@ class _VeiculosTelaState extends State<VeiculosTela> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _novoVeiculo,
-        icon: const Icon(Icons.add),
-        label: const Text('Veículo'),
-      ),
       body: FutureBuilder<List<Veiculo>>(
         future: _veiculos,
         builder: (context, snap) {
@@ -114,7 +109,7 @@ class _VeiculosTelaState extends State<VeiculosTela> {
           return RefreshIndicator(
             onRefresh: () async => _recarregar(),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: [
                 Conteudo(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -150,6 +145,16 @@ class _VeiculosTelaState extends State<VeiculosTela> {
                           onTap: () => _abrirPainel(v),
                         ),
                       ),
+                    // botão junto da lista (no lugar do botão flutuante no canto da tela)
+                    if (veiculos.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      OutlinedButton.icon(
+                        onPressed: _novoVeiculo,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Adicionar veículo'),
+                        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                      ),
+                    ],
                   ]),
                 ),
               ],
