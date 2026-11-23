@@ -5,14 +5,18 @@ import '../api/api_client.dart';
 import '../api/modelos.dart';
 import '../util/formatos.dart';
 import '../widgets/comuns.dart';
+import '../widgets/linha_do_tempo.dart';
 
 /// Revisão periódica: data, km e itens revisados. Mostra na hora a previsão da próxima vez de
 /// cada item (km e data, conforme a referência do item). Retorna `true` via Navigator.pop quando salvo.
 class ManutencaoFormTela extends StatefulWidget {
-  const ManutencaoFormTela({super.key, required this.veiculo, required this.itens});
+  const ManutencaoFormTela({super.key, required this.veiculo, required this.itens, this.kmPorMes});
 
   final Veiculo veiculo;
   final List<ItemManutencao> itens;
+
+  /// Ritmo de uso, para posicionar itens por km na linha do tempo.
+  final double? kmPorMes;
 
   @override
   State<ManutencaoFormTela> createState() => _ManutencaoFormTelaState();
@@ -43,6 +47,13 @@ class _ManutencaoFormTelaState extends State<ManutencaoFormTela> {
         for (final i in widget.itens)
           if (_selecionados.contains(i.id)) Previsao.de(i, _kmInformado, _data),
       ]..sort((a, b) => a.item.nome.compareTo(b.item.nome));
+
+  Widget _linhaDoTempo() => LinhaDoTempo(
+        kmAtual: _kmInformado ?? widget.veiculo.kmAtual,
+        kmPorMes: widget.kmPorMes,
+        hoje: _data,
+        vencimentos: [for (final p in _previsoes()) Vencimento(p.item.nome, km: p.km, data: p.data)],
+      );
 
   /// A mais próxima entre os itens marcados: menor km e data mais cedo.
   String? _proximaRevisao() {
@@ -86,12 +97,8 @@ class _ManutencaoFormTelaState extends State<ManutencaoFormTela> {
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (previsoes.isNotEmpty) ...[
                 const Text('Próximas revisões previstas:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                for (final p in previsoes)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text('• ${p.item.nome}: ${p.texto}'),
-                  ),
+                const SizedBox(height: 12),
+                SizedBox(width: 420, child: _linhaDoTempo()),
               ] else
                 const Text('Manutenção registrada no histórico.'),
             ]),
@@ -178,6 +185,8 @@ class _ManutencaoFormTelaState extends State<ManutencaoFormTela> {
                     subtitle: Text(resumo),
                   ),
                 ),
+                const TituloSecao('Linha do tempo'),
+                _linhaDoTempo(),
               ],
               if (_erro?.erroDe('itensIds') case final msg?)
                 Padding(

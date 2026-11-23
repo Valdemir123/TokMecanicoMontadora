@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../api/api_client.dart';
 import '../api/modelos.dart';
 import '../util/formatos.dart';
 import '../widgets/comuns.dart';
@@ -25,11 +26,39 @@ class _HistoricoTelaState extends State<HistoricoTela> {
 
   void _recarregar() => setState(() => _lista = Servicos.of(context).api.manutencoes(widget.veiculo.id));
 
+  Future<void> _excluir(Manutencao m) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir revisão?'),
+        content: Text('A revisão de ${formatarData(m.data)} (${formatarKm(m.km)} km) será apagada. '
+            'Os itens dela voltam para a revisão anterior.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await Servicos.of(context).api.excluirManutencao(widget.veiculo.id, m.id);
+      if (!mounted) return;
+      mostrarMensagem(context, 'Revisão excluída.');
+      _recarregar();
+    } on ApiException catch (e) {
+      if (mounted) mostrarMensagem(context, e.mensagem, erro: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: Text('Histórico · ${widget.veiculo.placa}')),
+      appBar: AppBar(title: Text('Histórico de revisões · ${widget.veiculo.placa}')),
       body: FutureBuilder<List<Manutencao>>(
         future: _lista,
         builder: (context, snap) {
@@ -63,6 +92,11 @@ class _HistoricoTelaState extends State<HistoricoTela> {
                                   style: t.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                             ),
                             if (m.valor != null) Text(formatarReais(m.valor!), style: t.titleSmall),
+                            IconButton(
+                              tooltip: 'Excluir revisão',
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => _excluir(m),
+                            ),
                           ]),
                           if (m.itens.isNotEmpty) ...[
                             const SizedBox(height: 8),

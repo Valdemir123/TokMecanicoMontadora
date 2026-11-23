@@ -93,6 +93,9 @@ class ApiClient {
           .map((e) => Manutencao.fromJson(e))
           .toList();
 
+  Future<void> excluirManutencao(String veiculoId, String manutencaoId) =>
+      _send('DELETE', '/api/veiculos/$veiculoId/manutencoes/$manutencaoId');
+
   Future<void> registrarManutencao(String veiculoId, Map<String, dynamic> dados) =>
       _send('POST', '/api/veiculos/$veiculoId/manutencoes', dados);
 

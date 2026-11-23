@@ -293,6 +293,45 @@ public class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task ExcluirRevisao_RestauraEstadoAnterior_EKmPorMes()
+    {
+        var (_, http) = await CriarUsuario("596.317.802-95");
+        var r = await http.PostAsJsonAsync("/api/veiculos", new
+        {
+            placa = "DEF5678", fabricante = "Nissan", modelo = "Kicks", anoFabricacao = 2025, cor = "Branco",
+            kmAtual = 17_000, dataReferencia = "2026-01-10", kmReferencia = 5_000,
+        });
+        var v = (await r.Content.ReadFromJsonAsync<VeiculoResponse>(Json))!;
+        var oleo = (await Painel(http, v.Id)).Itens.Single(i => i.CodigoCatalogo == "oleo-motor");
+
+        async Task<Guid> Revisao(string data, int km)
+        {
+            var resp = await http.PostAsJsonAsync($"/api/veiculos/{v.Id}/manutencoes", new { data, km, itensIds = new[] { oleo.Id } });
+            return (await resp.Content.ReadFromJsonAsync<ManutencaoResponse>(Json))!.Id;
+        }
+        var primeira = await Revisao("2026-06-10", 11_000);
+        var segunda = await Revisao("2026-11-10", 17_000);
+        Assert.Equal(17_000, (await Painel(http, v.Id)).Itens.Single(i => i.Id == oleo.Id).UltimaKm);
+
+        // 5.000 km em 10/01 -> 17.000 km em 10/11 (304 dias): ~1.201 km/mês
+        var kmMes = (await Painel(http, v.Id)).KmPorMes;
+        Assert.InRange(kmMes!.Value, 1_150, 1_250);
+
+        // excluir a mais recente volta para a anterior
+        Assert.Equal(HttpStatusCode.NoContent, (await http.DeleteAsync($"/api/veiculos/{v.Id}/manutencoes/{segunda}")).StatusCode);
+        var item = (await Painel(http, v.Id)).Itens.Single(i => i.Id == oleo.Id);
+        Assert.Equal(11_000, item.UltimaKm);
+        Assert.Equal(new DateOnly(2026, 6, 10), item.UltimaData);
+
+        // excluir a única restante volta para a data de referência do cadastro
+        await http.DeleteAsync($"/api/veiculos/{v.Id}/manutencoes/{primeira}");
+        item = (await Painel(http, v.Id)).Itens.Single(i => i.Id == oleo.Id);
+        Assert.Equal(5_000, item.UltimaKm);
+        Assert.Equal(new DateOnly(2026, 1, 10), item.UltimaData);
+        Assert.Empty((await http.GetFromJsonAsync<List<ManutencaoResponse>>($"/api/veiculos/{v.Id}/manutencoes", Json))!);
+    }
+
+    [Fact]
     public async Task Km_NaoPodeVoltar_EAtualizaSituacao()
     {
         var (_, http) = await CriarUsuario("248.438.034-80");

@@ -112,5 +112,15 @@ public class Manutencao
 
     /// <summary>Ids dos itens atendidos, separados por vírgula no banco.</summary>
     public List<Guid> ItensIds { get; set; } = [];
+
+    /// <summary>
+    /// Como estava a "última realização" de cada item antes desta manutenção (JSON),
+    /// para restaurar se a manutenção for excluída.
+    /// </summary>
+    public string? AnterioresJson { get; set; }
+
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 }
+
+/// <summary>Estado anterior de um item, guardado na manutenção.</summary>
+public record EstadoAnterior(Guid ItemId, int? UltimaKm, DateOnly? UltimaData);

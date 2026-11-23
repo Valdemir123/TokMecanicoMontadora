@@ -16,6 +16,7 @@ public static class AjustesDeEsquema
             "UPDATE ItensManutencao SET Referencia = CASE " +
             "WHEN IntervaloKm IS NOT NULL AND IntervaloMeses IS NULL THEN 'Km' " +
             "WHEN IntervaloKm IS NULL AND IntervaloMeses IS NOT NULL THEN 'Data' ELSE 'Ambos' END");
+        AdicionarColuna(db, "Manutencoes", "AnterioresJson", "TEXT NULL");
     }
 
     private static void AdicionarColuna(TokMecanicoDbContext db, string tabela, string coluna, string definicao, string? depois = null)

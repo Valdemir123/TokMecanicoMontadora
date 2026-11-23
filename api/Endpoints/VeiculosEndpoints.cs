@@ -59,6 +59,9 @@ public static class VeiculosEndpoints
             }));
             if (req.KmAtual is { } km)
                 veiculo.RegistrosKm.Add(new RegistroKm { Km = km, Data = hoje });
+            // a data de referência também é uma leitura de km (ajuda a estimar o ritmo de uso)
+            if (req.DataReferencia is { } dataRef && dataRef < hoje && kmRef is { } kmNaData)
+                veiculo.RegistrosKm.Add(new RegistroKm { Km = kmNaData, Data = dataRef });
 
             db.Veiculos.Add(veiculo);
             await db.SaveChangesAsync();
@@ -117,12 +120,26 @@ public static class VeiculosEndpoints
                 .ThenBy(i => i.Nome)
                 .ToList();
 
+            // Ritmo de uso: leituras de km + manutenções (data, km), do ponto mais antigo ao mais recente.
+            var pontos = (await db.RegistrosKm.Where(r => r.VeiculoId == id).Select(r => new { r.Data, r.Km }).ToListAsync())
+                .Concat(await db.Manutencoes.Where(m => m.VeiculoId == id).Select(m => new { m.Data, m.Km }).ToListAsync())
+                .OrderBy(x => x.Data).ToList();
+            double? kmPorMes = null;
+            if (pontos.Count >= 2)
+            {
+                var (primeiro, ultimo) = (pontos.First(), pontos.MaxBy(x => (x.Data, x.Km))!);
+                var dias = ultimo.Data.DayNumber - primeiro.Data.DayNumber;
+                if (dias >= 30 && ultimo.Km > primeiro.Km)
+                    kmPorMes = Math.Round((ultimo.Km - primeiro.Km) / (double)dias * 30.44);
+            }
+
             return Results.Ok(new PainelResponse(
                 VeiculoResponse.De(veiculo),
                 itens.Count(i => i.Situacao == Situacao.Vencido),
                 itens.Count(i => i.Situacao == Situacao.Proximo),
                 itens.Count(i => i.Situacao == Situacao.SemRegistro),
-                itens));
+                itens,
+                kmPorMes));
         });
     }
 

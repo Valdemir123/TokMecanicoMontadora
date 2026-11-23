@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TokMecanico.Api.Contracts;
 using TokMecanico.Api.Data;
@@ -116,6 +117,8 @@ public static class ManutencoesEndpoints
             return Results.Ok(lista.Select(m => ParaResponse(m, nomes)));
         });
 
+        g.MapDelete("/manutencoes/{manutencaoId:guid}", ExcluirManutencao);
+
         g.MapPost("/manutencoes", async (Guid veiculoId, ManutencaoRequest req, TokMecanicoDbContext db, TimeProvider relogio) =>
         {
             var veiculo = await db.Veiculos.Include(v => v.Itens).FirstOrDefaultAsync(v => v.Id == veiculoId);
@@ -147,8 +150,12 @@ public static class ManutencoesEndpoints
             };
             db.Manutencoes.Add(manutencao);
 
-            // Atualiza a "última realização" só se esta manutenção for a mais recente do item.
-            foreach (var item in itens.Where(i => i.UltimaData is null || i.UltimaData <= manutencao.Data))
+            // Atualiza a "última realização" só se esta manutenção for a mais recente do item,
+            // guardando o estado anterior para poder desfazer se ela for excluída.
+            var atualizados = itens.Where(i => i.UltimaData is null || i.UltimaData <= manutencao.Data).ToList();
+            manutencao.AnterioresJson = JsonSerializer.Serialize(
+                atualizados.Select(i => new EstadoAnterior(i.Id, i.UltimaKm, i.UltimaData)).ToList());
+            foreach (var item in atualizados)
             {
                 item.UltimaData = manutencao.Data;
                 item.UltimaKm = manutencao.Km;
@@ -159,6 +166,46 @@ public static class ManutencoesEndpoints
             return Results.Created($"/api/veiculos/{veiculoId}/manutencoes/{manutencao.Id}",
                 ParaResponse(manutencao, itens.ToDictionary(i => i.Id, i => i.Nome)));
         });
+    }
+
+    /// <summary>
+    /// Exclui uma manutenção. Os itens que tinham esta manutenção como "última realização" voltam
+    /// para a manutenção anterior mais recente ou, se não houver, para o estado guardado antes dela.
+    /// </summary>
+    private static async Task<IResult> ExcluirManutencao(Guid veiculoId, Guid manutencaoId, TokMecanicoDbContext db)
+    {
+        var m = await db.Manutencoes.FirstOrDefaultAsync(x => x.Id == manutencaoId && x.VeiculoId == veiculoId);
+        if (m is null) return Results.NotFound();
+
+        var anteriores = string.IsNullOrEmpty(m.AnterioresJson)
+            ? []
+            : JsonSerializer.Deserialize<List<EstadoAnterior>>(m.AnterioresJson) ?? [];
+        var outras = (await db.Manutencoes.Where(x => x.VeiculoId == veiculoId && x.Id != m.Id).ToListAsync());
+        var itens = await db.ItensManutencao.Where(i => i.VeiculoId == veiculoId && m.ItensIds.Contains(i.Id)).ToListAsync();
+
+        foreach (var item in itens)
+        {
+            if (item.UltimaData != m.Data || item.UltimaKm != m.Km) continue; // outra manutenção é a referência
+
+            var outra = outras.Where(x => x.ItensIds.Contains(item.Id))
+                .OrderByDescending(x => x.Data).ThenByDescending(x => x.Km).FirstOrDefault();
+            var antes = anteriores.FirstOrDefault(a => a.ItemId == item.Id);
+
+            if (outra is not null && (antes?.UltimaData is null || outra.Data >= antes.UltimaData))
+            {
+                item.UltimaData = outra.Data;
+                item.UltimaKm = outra.Km;
+            }
+            else
+            {
+                item.UltimaData = antes?.UltimaData;
+                item.UltimaKm = antes?.UltimaKm;
+            }
+        }
+
+        db.Manutencoes.Remove(m);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
     }
 
     /// <summary>O km atual do veículo só avança (nunca volta).</summary>

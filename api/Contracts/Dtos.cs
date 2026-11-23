@@ -84,9 +84,10 @@ public record ItemManutencaoResponse(
     }
 }
 
+/// <summary>KmPorMes: ritmo de uso estimado pelo histórico de km (nulo se ainda não dá para estimar).</summary>
 public record PainelResponse(
     VeiculoResponse Veiculo, int Vencidos, int Proximos, int SemRegistro,
-    List<ItemManutencaoResponse> Itens);
+    List<ItemManutencaoResponse> Itens, double? KmPorMes = null);
 
 public record RegistroKmResponse(Guid Id, int Km, DateOnly Data)
 {

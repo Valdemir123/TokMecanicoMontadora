@@ -227,9 +227,13 @@ class Painel {
     required this.proximos,
     required this.semRegistro,
     required this.itens,
+    this.kmPorMes,
   });
 
   final Veiculo veiculo;
+
+  /// Ritmo de uso estimado (km por mês); nulo se ainda não há histórico suficiente.
+  final double? kmPorMes;
   final int vencidos;
   final int proximos;
   final int semRegistro;
@@ -241,6 +245,7 @@ class Painel {
         proximos: j['proximos'],
         semRegistro: j['semRegistro'],
         itens: (j['itens'] as List).map((e) => ItemManutencao.fromJson(e)).toList(),
+        kmPorMes: (j['kmPorMes'] as num?)?.toDouble(),
       );
 }
 

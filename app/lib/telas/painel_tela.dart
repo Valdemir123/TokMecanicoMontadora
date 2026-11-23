@@ -7,6 +7,7 @@ import '../api/api_client.dart';
 import '../api/modelos.dart';
 import '../util/formatos.dart';
 import '../widgets/comuns.dart';
+import '../widgets/linha_do_tempo.dart';
 import 'historico_tela.dart';
 import 'item_form_tela.dart';
 import 'manutencao_form_tela.dart';
@@ -147,8 +148,7 @@ class _PainelTelaState extends State<PainelTela> {
                 IconButton(
                   tooltip: 'Histórico',
                   icon: const Icon(Icons.history),
-                  onPressed: () => Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => HistoricoTela(veiculo: p.veiculo))),
+                  onPressed: () => _abrir(HistoricoTela(veiculo: p.veiculo)),
                 ),
                 PopupMenuButton<String>(
                   onSelected: (op) => switch (op) {
@@ -210,10 +210,17 @@ class _PainelTelaState extends State<PainelTela> {
       ),
       const SizedBox(height: 12),
       FilledButton.icon(
-        onPressed: () => _abrir(ManutencaoFormTela(veiculo: p.veiculo, itens: p.itens)),
+        onPressed: () => _abrir(ManutencaoFormTela(veiculo: p.veiculo, itens: p.itens, kmPorMes: p.kmPorMes)),
         icon: const Icon(Icons.build),
         label: const Text('Registrar revisão periódica'),
         style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), textStyle: const TextStyle(fontSize: 16)),
+      ),
+      const SizedBox(height: 8),
+      OutlinedButton.icon(
+        onPressed: () => _abrir(HistoricoTela(veiculo: p.veiculo)),
+        icon: const Icon(Icons.history),
+        label: const Text('Histórico de revisões'),
+        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
       ),
       if (_proximaRevisao(p) case final proxima?) ...[
         const SizedBox(height: 12),
@@ -237,6 +244,25 @@ class _PainelTelaState extends State<PainelTela> {
       ]),
       const SizedBox(height: 12),
       _recado(p),
+      if (p.itens.any((i) => i.proximaKm != null || i.proximaData != null)) ...[
+        TituloSecao('Próximas revisões',
+            subtitulo: p.kmPorMes == null ? null : 'Seu uso: cerca de ${formatarKm(p.kmPorMes!.round())} km por mês'),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 16, 16, 4),
+            child: LinhaDoTempo(
+              kmAtual: v.kmAtual,
+              kmPorMes: p.kmPorMes,
+              vencimentos: [
+                for (final i in p.itens)
+                  if (i.proximaKm != null || i.proximaData != null)
+                    Vencimento(i.nome, km: i.proximaKm, data: i.proximaData),
+              ],
+            ),
+          ),
+        ),
+      ],
       const TituloSecao('Itens de manutenção'),
       for (final item in p.itens)
         AnimatedContainer(
@@ -296,8 +322,19 @@ class _PainelTelaState extends State<PainelTela> {
 
   /// Próximo vencimento entre todos os itens com histórico: menor km e data mais cedo.
   static String? _proximaRevisao(Painel p) {
-    final kms = p.itens.map((i) => i.proximaKm).whereType<int>().toList()..sort();
-    final datas = p.itens.map((i) => i.proximaData).whereType<DateTime>().toList()..sort();
+    // só o que ainda vai vencer (os atrasados aparecem no contador e na linha do tempo)
+    final kms = p.itens
+        .where((i) => (i.kmRestante ?? 1) > 0)
+        .map((i) => i.proximaKm)
+        .whereType<int>()
+        .toList()
+      ..sort();
+    final datas = p.itens
+        .where((i) => (i.diasRestantes ?? 1) > 0)
+        .map((i) => i.proximaData)
+        .whereType<DateTime>()
+        .toList()
+      ..sort();
     if (kms.isEmpty && datas.isEmpty) return null;
     return [
       if (kms.isNotEmpty) 'aos ${formatarKm(kms.first)} km',
