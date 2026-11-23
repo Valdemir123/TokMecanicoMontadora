@@ -85,10 +85,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Bem-vindo!'), findsOneWidget);
 
+    // Sem o aceite dos termos o botão fica desabilitado.
+    FilledButton botao() => tester.widget<FilledButton>(find.ancestor(
+        of: find.text('Concluir cadastro'), matching: find.byWidgetPredicate((w) => w is FilledButton)));
+    expect(botao().onPressed, isNull);
+    expect(find.text('Marque o aceite dos termos para concluir o cadastro.'), findsOneWidget);
+
+    await tester.ensureVisible(find.byType(Checkbox));
+    await tester.tap(find.byType(Checkbox));
+    await tester.pumpAndSettle();
+    expect(botao().onPressed, isNotNull);
+
     await _digitar(tester, 'CPF', '12345678900');
     await _digitar(tester, 'Senha', 'curta');
-    await tester.ensureVisible(find.text('Concluir cadastro'));
-    await tester.tap(find.text('Concluir cadastro'));
+    // (o campo focado rola a tela; aciona o botão diretamente)
+    botao().onPressed!();
     await tester.pumpAndSettle();
 
     expect(find.text('CPF inválido'), findsOneWidget);

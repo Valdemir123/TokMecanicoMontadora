@@ -396,8 +396,18 @@ void mostrarSobre(BuildContext context) {
 
 /// Campo de senha com botão de mostrar/ocultar.
 class CampoSenha extends StatefulWidget {
-  const CampoSenha({super.key, required this.controller, required this.rotulo, this.validator, this.erroApi, this.aoEnviar});
+  const CampoSenha({
+    super.key,
+    required this.controller,
+    required this.rotulo,
+    this.validator,
+    this.erroApi,
+    this.aoEnviar,
+    this.autofillHints = const [AutofillHints.password],
+  });
 
+  /// Para o gerenciador de senhas do navegador/celular: senha atual (login) ou nova (cadastro).
+  final Iterable<String> autofillHints;
   final TextEditingController controller;
   final String rotulo;
   final FormFieldValidator<String>? validator;
@@ -415,6 +425,8 @@ class _CampoSenhaState extends State<CampoSenha> {
   Widget build(BuildContext context) => TextFormField(
         controller: widget.controller,
         obscureText: _oculta,
+        autofillHints: widget.autofillHints,
+        keyboardType: TextInputType.visiblePassword,
         autocorrect: false,
         enableSuggestions: false,
         decoration: InputDecoration(

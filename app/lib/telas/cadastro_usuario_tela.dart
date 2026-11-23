@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../api/api_client.dart';
@@ -9,7 +10,12 @@ import '../widgets/endereco_form.dart';
 
 /// Cadastro (ou edição, se [usuario] for informado) dos dados do usuário.
 class CadastroUsuarioTela extends StatefulWidget {
-  const CadastroUsuarioTela({super.key, this.usuario, this.aoConcluir, this.aoIrParaLogin});
+  const CadastroUsuarioTela({
+    super.key,
+    this.usuario,
+    this.aoConcluir,
+    this.aoIrParaLogin,
+  });
 
   final Usuario? usuario;
   final ValueChanged<Usuario>? aoConcluir;
@@ -46,7 +52,9 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
       _cpf.text = mascaraCpf.aplicar(u.cpf);
       _nome.text = u.nomeCompleto;
       _email.text = u.email ?? '';
-      _telefone.text = u.telefone == null ? '' : mascaraTelefone.aplicar(u.telefone!);
+      _telefone.text = u.telefone == null
+          ? ''
+          : mascaraTelefone.aplicar(u.telefone!);
       _residencial.preencher(u.enderecoResidencial);
       _trabalho.preencher(u.enderecoTrabalho);
     }
@@ -66,7 +74,11 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
     setState(() => _erro = null);
     if (!_form.currentState!.validate()) return;
     if (!_editando && !_aceite) {
-      mostrarMensagem(context, 'Para continuar, aceite os termos de uso e a política de privacidade.', erro: true);
+      mostrarMensagem(
+        context,
+        'Para continuar, aceite os termos de uso e a política de privacidade.',
+        erro: true,
+      );
       return;
     }
 
@@ -91,10 +103,14 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
         final sessao = await api.cadastrar(dados);
         await Sessao.salvar(sessao.token);
         api.token = sessao.token;
+        TextInput.finishAutofillContext(); // oferece salvar CPF + senha no navegador/celular
         usuario = sessao.usuario;
       }
       if (!mounted) return;
-      mostrarMensagem(context, _editando ? 'Dados atualizados.' : 'Cadastro concluído!');
+      mostrarMensagem(
+        context,
+        _editando ? 'Dados atualizados.' : 'Cadastro concluído!',
+      );
       widget.aoConcluir?.call(usuario);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -115,117 +131,206 @@ class _CadastroUsuarioTelaState extends State<CadastroUsuarioTela> {
         child: Conteudo(
           child: Form(
             key: _form,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              if (!_editando) ...[
-                const Center(child: LogoTok(altura: 150)),
-                const SizedBox(height: 24),
-                Text('Bem-vindo!',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text('Cadastre-se para controlar as manutenções do seu veículo.',
-                    style: TextStyle(color: cores.onSurfaceVariant)),
-              ],
-              const TituloSecao('Seus dados'),
-              LinhaResponsiva(flex: const [2, 3], children: [
-                TextFormField(
-                  controller: _cpf,
-                  enabled: !_editando,
-                  decoration: InputDecoration(
-                    labelText: 'CPF',
-                    hintText: '000.000.000-00',
-                    errorText: _erro?.erroDe('cpf'),
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [mascaraCpf],
-                  validator: (v) => cpfValido(v ?? '') ? null : 'CPF inválido',
-                ),
-                TextFormField(
-                  controller: _nome,
-                  decoration: InputDecoration(labelText: 'Nome completo', errorText: _erro?.erroDe('nomeCompleto')),
-                  textCapitalization: TextCapitalization.words,
-                  validator: (v) {
-                    final n = (v ?? '').trim();
-                    if (n.isEmpty) return 'Informe o nome completo';
-                    if (!n.contains(' ')) return 'Informe nome e sobrenome';
-                    return null;
-                  },
-                ),
-              ]),
-              const SizedBox(height: 12),
-              LinhaResponsiva(children: [
-                TextFormField(
-                  controller: _email,
-                  decoration: InputDecoration(labelText: 'E-mail (opcional)', errorText: _erro?.erroDe('email')),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) =>
-                      (v ?? '').trim().isEmpty || (v ?? '').contains('@') ? null : 'E-mail inválido',
-                ),
-                TextFormField(
-                  controller: _telefone,
-                  decoration: const InputDecoration(labelText: 'Celular (opcional)', hintText: '(00) 00000-0000'),
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [mascaraTelefone],
-                ),
-              ]),
-              const TituloSecao('Endereço residencial'),
-              EnderecoForm(controles: _residencial, prefixoErro: 'enderecoResidencial', erroApi: _erro),
-              const TituloSecao('Endereço de trabalho',
-                  subtitulo: 'Opcional. Ajuda a encontrar oficinas e lojas perto de onde você passa o dia.'),
-              EnderecoForm(
-                controles: _trabalho,
-                prefixoErro: 'enderecoTrabalho',
-                erroApi: _erro,
-                obrigatorio: false,
-              ),
-              if (!_editando) ...[
-                const TituloSecao('Acesso', subtitulo: 'Você vai entrar no app com o seu CPF e esta senha.'),
-                LinhaResponsiva(children: [
-                  CampoSenha(
-                    controller: _senha,
-                    rotulo: 'Senha',
-                    erroApi: _erro?.erroDe('senha'),
-                    validator: problemaSenha,
-                  ),
-                  CampoSenha(
-                    controller: _confirma,
-                    rotulo: 'Confirmar senha',
-                    validator: (v) => v == _senha.text ? null : 'As senhas não conferem',
-                  ),
-                ]),
-                const SizedBox(height: 8),
-                CheckboxListTile(
-                  value: _aceite,
-                  onChanged: (v) => setState(() => _aceite = v ?? false),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  title: Wrap(children: [
-                    const Text('Li e aceito os '),
-                    InkWell(
-                      onTap: () => mostrarTermos(context),
-                      child: Text('termos de uso e a política de privacidade',
-                          style: TextStyle(color: cores.primary, decoration: TextDecoration.underline)),
+            child: AutofillGroup(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (!_editando) ...[
+                    const Center(child: LogoTok(altura: 150)),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Bem-vindo!',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                  ]),
-                  subtitle: _erro?.erroDe('aceiteTermos') == null
-                      ? null
-                      : Text(_erro!.erroDe('aceiteTermos')!, style: TextStyle(color: cores.error)),
-                ),
-              ],
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: _salvando ? null : _salvar,
-                icon: _salvando
-                    ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.check),
-                label: Text(_editando ? 'Salvar alterações' : 'Concluir cadastro'),
-                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Cadastre-se para controlar as manutenções do seu veículo.',
+                      style: TextStyle(color: cores.onSurfaceVariant),
+                    ),
+                  ],
+                  const TituloSecao('Seus dados'),
+                  LinhaResponsiva(
+                    flex: const [2, 3],
+                    children: [
+                      TextFormField(
+                        controller: _cpf,
+                        enabled: !_editando,
+                        decoration: InputDecoration(
+                          labelText: 'CPF',
+                          hintText: '000.000.000-00',
+                          errorText: _erro?.erroDe('cpf'),
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [mascaraCpf],
+                        autofillHints: const [AutofillHints.username],
+                        validator: (v) =>
+                            cpfValido(v ?? '') ? null : 'CPF inválido',
+                      ),
+                      TextFormField(
+                        controller: _nome,
+                        decoration: InputDecoration(
+                          labelText: 'Nome completo',
+                          errorText: _erro?.erroDe('nomeCompleto'),
+                        ),
+                        textCapitalization: TextCapitalization.words,
+                        validator: (v) {
+                          final n = (v ?? '').trim();
+                          if (n.isEmpty) return 'Informe o nome completo';
+                          if (!n.contains(' ')) {
+                            return 'Informe nome e sobrenome';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  LinhaResponsiva(
+                    children: [
+                      TextFormField(
+                        controller: _email,
+                        decoration: InputDecoration(
+                          labelText: 'E-mail (opcional)',
+                          errorText: _erro?.erroDe('email'),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) =>
+                            (v ?? '').trim().isEmpty || (v ?? '').contains('@')
+                            ? null
+                            : 'E-mail inválido',
+                      ),
+                      TextFormField(
+                        controller: _telefone,
+                        decoration: const InputDecoration(
+                          labelText: 'Celular (opcional)',
+                          hintText: '(00) 00000-0000',
+                        ),
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [mascaraTelefone],
+                      ),
+                    ],
+                  ),
+                  const TituloSecao('Endereço residencial'),
+                  EnderecoForm(
+                    controles: _residencial,
+                    prefixoErro: 'enderecoResidencial',
+                    erroApi: _erro,
+                  ),
+                  const TituloSecao(
+                    'Endereço de trabalho',
+                    subtitulo: 'Opcional. Ajuda a encontrar oficinas e lojas perto de onde você passa o dia.',
+                  ),
+                  EnderecoForm(
+                    controles: _trabalho,
+                    prefixoErro: 'enderecoTrabalho',
+                    erroApi: _erro,
+                    obrigatorio: false,
+                  ),
+                  if (!_editando) ...[
+                    const TituloSecao(
+                      'Acesso',
+                      subtitulo:
+                          'Você vai entrar no app com o seu CPF e esta senha.',
+                    ),
+                    LinhaResponsiva(
+                      children: [
+                        CampoSenha(
+                          controller: _senha,
+                          rotulo: 'Senha',
+                          erroApi: _erro?.erroDe('senha'),
+                          validator: problemaSenha,
+                          autofillHints: const [AutofillHints.newPassword],
+                        ),
+                        CampoSenha(
+                          controller: _confirma,
+                          rotulo: 'Confirmar senha',
+                          autofillHints: const [AutofillHints.newPassword],
+                          validator: (v) => v == _senha.text
+                              ? null
+                              : 'As senhas não conferem',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    CheckboxListTile(
+                      value: _aceite,
+                      onChanged: (v) => setState(() => _aceite = v ?? false),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                      title: Wrap(
+                        children: [
+                          const Text('Li e aceito os '),
+                          InkWell(
+                            onTap: () => mostrarTermos(context),
+                            child: Text(
+                              'termos de uso e a política de privacidade',
+                              style: TextStyle(
+                                color: cores.primary,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: _erro?.erroDe('aceiteTermos') == null
+                          ? null
+                          : Text(
+                              _erro!.erroDe('aceiteTermos')!,
+                              style: TextStyle(color: cores.error),
+                            ),
+                    ),
+                  ],
+                  if (!_editando && !_aceite) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: cores.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Marque o aceite dos termos para concluir o cadastro.',
+                            style: TextStyle(color: cores.onSurfaceVariant),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ] else
+                    const SizedBox(height: 24),
+                  FilledButton.icon(
+                    // no cadastro, só habilita depois do aceite dos termos
+                    onPressed: _salvando || (!_editando && !_aceite)
+                        ? null
+                        : _salvar,
+                    icon: _salvando
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check),
+                    label: Text(
+                      _editando ? 'Salvar alterações' : 'Concluir cadastro',
+                    ),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                  ),
+                  if (!_editando && widget.aoIrParaLogin != null) ...[
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: widget.aoIrParaLogin,
+                      child: const Text('Já tenho cadastro. Entrar'),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                ],
               ),
-              if (!_editando && widget.aoIrParaLogin != null) ...[
-                const SizedBox(height: 8),
-                TextButton(onPressed: widget.aoIrParaLogin, child: const Text('Já tenho cadastro. Entrar')),
-              ],
-              const SizedBox(height: 24),
-            ]),
+            ),
           ),
         ),
       ),
