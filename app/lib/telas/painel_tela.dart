@@ -170,7 +170,7 @@ class _PainelTelaState extends State<PainelTela> {
               : FloatingActionButton.extended(
                   onPressed: () => _abrir(ManutencaoFormTela(veiculo: p.veiculo, itens: p.itens)),
                   icon: const Icon(Icons.build),
-                  label: const Text('Registrar manutenção'),
+                  label: const Text('Revisão periódica'),
                 ),
           body: switch (snap) {
             AsyncSnapshot(hasError: true, :final error?) => ErroCarregar(erro: error, tentarDeNovo: _recarregar),
@@ -215,6 +215,18 @@ class _PainelTelaState extends State<PainelTela> {
           ]),
         ),
       ),
+      if (_proximaRevisao(p) case final proxima?) ...[
+        const SizedBox(height: 12),
+        Card(
+          margin: EdgeInsets.zero,
+          color: Theme.of(context).colorScheme.primaryContainer,
+          child: ListTile(
+            leading: const Icon(Icons.event_repeat),
+            title: const Text('Próxima revisão', style: TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(proxima),
+          ),
+        ),
+      ],
       const SizedBox(height: 12),
       Row(children: [
         _Contador(rotulo: 'Vencidos', valor: p.vencidos, situacao: Situacao.vencido),
@@ -280,6 +292,17 @@ class _PainelTelaState extends State<PainelTela> {
       titulo: 'Me conte o histórico',
       texto: 'Toque nos itens "sem registro" e informe quando foram feitos pela última vez.',
     );
+  }
+
+  /// Próximo vencimento entre todos os itens com histórico: menor km e data mais cedo.
+  static String? _proximaRevisao(Painel p) {
+    final kms = p.itens.map((i) => i.proximaKm).whereType<int>().toList()..sort();
+    final datas = p.itens.map((i) => i.proximaData).whereType<DateTime>().toList()..sort();
+    if (kms.isEmpty && datas.isEmpty) return null;
+    return [
+      if (kms.isNotEmpty) 'aos ${formatarKm(kms.first)} km',
+      if (datas.isNotEmpty) 'em ${formatarData(datas.first)}',
+    ].join(' ou ');
   }
 
   static String _resumo(ItemManutencao i) {

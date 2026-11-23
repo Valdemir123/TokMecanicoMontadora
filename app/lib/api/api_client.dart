@@ -78,6 +78,10 @@ class ApiClient {
   Future<ItemManutencao> atualizarItem(String veiculoId, String itemId, Map<String, dynamic> dados) async =>
       ItemManutencao.fromJson(await _send('PUT', '/api/veiculos/$veiculoId/itens/$itemId', dados));
 
+  /// Após o cadastro: marca como "sem registro" os itens que não foram feitos na data de referência.
+  Future<void> conferirItens(String veiculoId, List<String> semRegistro) =>
+      _send('POST', '/api/veiculos/$veiculoId/itens/conferencia', {'semRegistro': semRegistro});
+
   Future<void> excluirItem(String veiculoId, String itemId) =>
       _send('DELETE', '/api/veiculos/$veiculoId/itens/$itemId');
 

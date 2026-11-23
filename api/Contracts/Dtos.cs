@@ -18,8 +18,16 @@ public record LoginRequest(string? Cpf, string? Senha);
 
 public record TrocaSenhaRequest(string? SenhaAtual, string? NovaSenha);
 
+/// <summary>
+/// DataReferencia/KmReferencia (só no cadastro): data da aquisição ou da última revisão e o km nessa data.
+/// Servem para pré-preencher a última realização de todos os itens de manutenção.
+/// </summary>
 public record VeiculoRequest(
-    string? Placa, string? Fabricante, string? Modelo, int? AnoFabricacao, string? Cor, int? KmAtual);
+    string? Placa, string? Fabricante, string? Modelo, int? AnoFabricacao, string? Cor, int? KmAtual,
+    DateOnly? DataReferencia = null, int? KmReferencia = null);
+
+/// <summary>Conferência após o cadastro: itens que NÃO foram feitos na data de referência.</summary>
+public record ConferenciaRequest(List<Guid>? SemRegistro);
 
 public record ItemManutencaoRequest(
     string? Nome, string? Observacao, int? IntervaloKm, int? IntervaloMeses,

@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../api/api_client.dart';
 import '../api/cep_service.dart';
 import '../api/modelos.dart';
+import '../util/formatos.dart';
 
 /// Disponibiliza os serviços (API e CEP) para as telas.
 class Servicos extends InheritedWidget {
@@ -27,6 +28,7 @@ class Conteudo extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.topCenter,
+        heightFactor: 1, // ocupa só a altura do conteúdo (ex.: rodapé com botão)
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: larguraMaxima),
           child: child,
@@ -183,8 +185,8 @@ void mostrarMensagem(BuildContext context, String texto, {bool erro = false}) {
   ));
 }
 
-/// Seletor de data em um campo somente leitura.
-class CampoData extends StatelessWidget {
+/// Campo de data: digitação direta (dd/mm/aaaa) ou escolha no calendário pelo botão.
+class CampoData extends StatefulWidget {
   const CampoData({
     super.key,
     required this.rotulo,
@@ -201,32 +203,104 @@ class CampoData extends StatelessWidget {
   final bool permitirLimpar;
 
   @override
-  Widget build(BuildContext context) {
-    final hoje = DateTime.now();
-    return InkWell(
-      onTap: () async {
-        final d = await showDatePicker(
-          context: context,
-          initialDate: valor ?? hoje,
-          firstDate: DateTime(1990),
-          lastDate: hoje,
-        );
-        if (d != null) aoMudar(d);
-      },
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: rotulo,
-          errorText: erro,
-          suffixIcon: permitirLimpar && valor != null
-              ? IconButton(icon: const Icon(Icons.clear), onPressed: () => aoMudar(null))
-              : const Icon(Icons.calendar_today, size: 18),
-        ),
-        child: Text(valor == null
-            ? ''
-            : '${valor!.day.toString().padLeft(2, '0')}/${valor!.month.toString().padLeft(2, '0')}/${valor!.year}'),
-      ),
-    );
+  State<CampoData> createState() => _CampoDataState();
+}
+
+class _CampoDataState extends State<CampoData> {
+  final _ctrl = TextEditingController();
+  String? _erroLocal;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl.text = _texto(widget.valor);
   }
+
+  @override
+  void didUpdateWidget(CampoData old) {
+    super.didUpdateWidget(old);
+    // valor mudado por fora (ex.: calendário ou limpar)
+    if (widget.valor != old.valor && _ler(_ctrl.text) != widget.valor) _ctrl.text = _texto(widget.valor);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  static String _texto(DateTime? d) => d == null ? '' : formatarData(d);
+
+  static DateTime? _ler(String t) {
+    final m = RegExp(r'^(\d{2})/(\d{2})/(\d{4})$').firstMatch(t);
+    if (m == null) return null;
+    final d = DateTime(int.parse(m[3]!), int.parse(m[2]!), int.parse(m[1]!));
+    // rejeita datas como 31/02 (que o DateTime "corrige" para março)
+    return d.day == int.parse(m[1]!) && d.month == int.parse(m[2]!) ? d : null;
+  }
+
+  void _digitou(String t) {
+    final hoje = DateTime.now();
+    if (t.isEmpty) {
+      setState(() => _erroLocal = null);
+      widget.aoMudar(null);
+      return;
+    }
+    if (t.length < 10) {
+      setState(() => _erroLocal = null);
+      return;
+    }
+    final d = _ler(t);
+    String? erro;
+    if (d == null) {
+      erro = 'Data inválida';
+    } else if (d.isAfter(hoje)) {
+      erro = 'Não pode ser no futuro';
+    } else if (d.year < 1950) {
+      erro = 'Data muito antiga';
+    }
+    setState(() => _erroLocal = erro);
+    if (erro == null) widget.aoMudar(d);
+  }
+
+  Future<void> _calendario() async {
+    final hoje = DateTime.now();
+    final d = await showDatePicker(
+      context: context,
+      initialDate: widget.valor ?? hoje,
+      firstDate: DateTime(1950),
+      lastDate: hoje,
+    );
+    if (d == null) return;
+    _ctrl.text = _texto(d);
+    setState(() => _erroLocal = null);
+    widget.aoMudar(d);
+  }
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+        controller: _ctrl,
+        keyboardType: TextInputType.datetime,
+        inputFormatters: [MascaraDigitos('##/##/####')],
+        decoration: InputDecoration(
+          labelText: widget.rotulo,
+          hintText: 'dd/mm/aaaa',
+          errorText: _erroLocal ?? widget.erro,
+          suffixIcon: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (widget.permitirLimpar && widget.valor != null)
+              IconButton(
+                tooltip: 'Limpar',
+                icon: const Icon(Icons.clear),
+                onPressed: () {
+                  _ctrl.clear();
+                  widget.aoMudar(null);
+                },
+              ),
+            IconButton(tooltip: 'Abrir calendário', icon: const Icon(Icons.calendar_today, size: 18), onPressed: _calendario),
+          ]),
+        ),
+        onChanged: _digitou,
+      );
 }
 
 /// Logo do Tok Mecânico (checklist + carro + nome); usa a versão branca no tema escuro.

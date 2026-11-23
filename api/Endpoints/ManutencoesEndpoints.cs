@@ -54,6 +54,26 @@ public static class ManutencoesEndpoints
             return Results.NoContent();
         });
 
+        // Conferência após o cadastro: limpa a última realização dos itens que não foram feitos.
+        g.MapPost("/itens/conferencia", async (Guid veiculoId, ConferenciaRequest req, TokMecanicoDbContext db) =>
+        {
+            var ids = req.SemRegistro ?? [];
+            var itens = await db.ItensManutencao.Where(i => i.VeiculoId == veiculoId && ids.Contains(i.Id)).ToListAsync();
+            if (itens.Count != ids.Distinct().Count())
+            {
+                var e = new Erros();
+                e.Add("semRegistro", "Algum item não pertence a este veículo.");
+                return e.Resultado();
+            }
+            foreach (var item in itens)
+            {
+                item.UltimaData = null;
+                item.UltimaKm = null;
+            }
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
         // ---------- Km ----------
 
         g.MapGet("/km", async (Guid veiculoId, TokMecanicoDbContext db) =>

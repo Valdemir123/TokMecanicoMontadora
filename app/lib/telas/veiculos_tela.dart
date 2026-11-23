@@ -5,6 +5,7 @@ import '../api/modelos.dart';
 import '../util/formatos.dart';
 import '../widgets/comuns.dart';
 import 'cadastro_usuario_tela.dart';
+import 'conferencia_tela.dart';
 import 'painel_tela.dart';
 import 'veiculo_form_tela.dart';
 
@@ -38,6 +39,9 @@ class _VeiculosTelaState extends State<VeiculosTela> {
       MaterialPageRoute(builder: (_) => const VeiculoFormTela()),
     );
     if (criado == null || !mounted) return;
+    // O usuário confere os itens pré-preenchidos pela data de referência.
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConferenciaTela(veiculo: criado)));
+    if (!mounted) return;
     // Volta para a lista já atualizada; o usuário escolhe o veículo para ver as manutenções.
     _recarregar();
     mostrarMensagem(context, 'Veículo cadastrado! Toque nele para ver as manutenções.');

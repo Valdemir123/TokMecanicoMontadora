@@ -252,6 +252,47 @@ public class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task DataDeReferencia_PreencheItens_EConferenciaLimpaOsNaoFeitos()
+    {
+        var (_, http) = await CriarUsuario("820.137.415-02");
+        var r = await http.PostAsJsonAsync("/api/veiculos", new
+        {
+            placa = "ABC1234", fabricante = "Honda", modelo = "Civic", anoFabricacao = 2019, cor = "Preto",
+            kmAtual = 62_000, dataReferencia = "2026-03-01", kmReferencia = 55_000,
+        });
+        Assert.Equal(HttpStatusCode.Created, r.StatusCode);
+        var v = (await r.Content.ReadFromJsonAsync<VeiculoResponse>(Json))!;
+
+        var painel = await Painel(http, v.Id);
+        Assert.Equal(0, painel.SemRegistro);
+        Assert.All(painel.Itens, i => Assert.Equal(new DateOnly(2026, 3, 1), i.UltimaData));
+        Assert.All(painel.Itens, i => Assert.Equal(55_000, i.UltimaKm));
+        // óleo: 55.000 + 10.000 = 65.000; atual 62.000 -> faltam 3.000 km, em dia
+        Assert.Equal(Situacao.EmDia, painel.Itens.Single(i => i.CodigoCatalogo == "oleo-motor").Situacao);
+        // alinhamento por "o que vencer 1º": 03/2027 ou 65.000 km -> em dia
+        // correia: 115.000 km / 03/2030 -> em dia
+
+        var correia = painel.Itens.Single(i => i.CodigoCatalogo == "correia-dentada");
+        var bateria = painel.Itens.Single(i => i.CodigoCatalogo == "bateria");
+        var conf = await http.PostAsJsonAsync($"/api/veiculos/{v.Id}/itens/conferencia", new { semRegistro = new[] { correia.Id, bateria.Id } });
+        Assert.Equal(HttpStatusCode.NoContent, conf.StatusCode);
+
+        painel = await Painel(http, v.Id);
+        Assert.Equal(2, painel.SemRegistro);
+        Assert.Null(painel.Itens.Single(i => i.Id == correia.Id).UltimaData);
+
+        var futura = await http.PostAsJsonAsync("/api/veiculos", new
+        {
+            placa = "XYZ9876", fabricante = "Honda", modelo = "Fit", anoFabricacao = 2019, cor = "Prata",
+            kmAtual = 10_000, dataReferencia = "2027-01-01", kmReferencia = 20_000,
+        });
+        var corpo = await futura.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.BadRequest, futura.StatusCode);
+        Assert.Contains("dataReferencia", corpo);
+        Assert.Contains("kmReferencia", corpo);
+    }
+
+    [Fact]
     public async Task Km_NaoPodeVoltar_EAtualizaSituacao()
     {
         var (_, http) = await CriarUsuario("248.438.034-80");

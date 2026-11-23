@@ -27,6 +27,10 @@ public static class VeiculosEndpoints
             var usuarioId = http.User.UsuarioId();
 
             var erros = Validar(req, relogio);
+            var hojeV = Hoje(relogio);
+            erros.Se(req.DataReferencia > hojeV, "dataReferencia", "A data não pode ser no futuro.");
+            erros.Se(req.KmReferencia is < 0 or > KmMaximo, "kmReferencia", "Km inválido.");
+            erros.Se(req.KmReferencia > req.KmAtual, "kmReferencia", "O km nessa data não pode ser maior que o km atual.");
             if (erros.Tem) return erros.Resultado();
 
             var placa = Validacoes.NormalizarPlaca(req.Placa);
@@ -39,7 +43,9 @@ public static class VeiculosEndpoints
             veiculo.KmAtual = req.KmAtual ?? 0;
             veiculo.DataKmAtual = req.KmAtual is null ? null : hoje;
 
-            // Todo veículo nasce com os itens padrão; o usuário informa depois a última realização.
+            // Todo veículo nasce com os itens padrão. Com a data de referência (aquisição ou última
+            // revisão), a última realização de cada item já vem preenchida; o usuário confere depois.
+            var kmRef = req.DataReferencia is null ? (int?)null : req.KmReferencia ?? req.KmAtual ?? 0;
             veiculo.Itens.AddRange(Catalogos.ItensPadrao.Select(c => new ItemManutencao
             {
                 CodigoCatalogo = c.Codigo,
@@ -48,6 +54,8 @@ public static class VeiculosEndpoints
                 IntervaloKm = c.IntervaloKm,
                 IntervaloMeses = c.IntervaloMeses,
                 Referencia = ReferenciaPadrao.De(c.IntervaloKm, c.IntervaloMeses),
+                UltimaData = req.DataReferencia,
+                UltimaKm = kmRef,
             }));
             if (req.KmAtual is { } km)
                 veiculo.RegistrosKm.Add(new RegistroKm { Km = km, Data = hoje });

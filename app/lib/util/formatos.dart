@@ -98,3 +98,10 @@ String? problemaSenha(String? senha) {
   if (!senha.contains(RegExp(r'[A-Za-zÀ-ÿ]')) || !senha.contains(RegExp(r'\d'))) return 'Use letras e números';
   return null;
 }
+
+/// Soma meses mantendo o dia (ajusta para o último dia do mês quando preciso, ex.: 31/01 + 1 = 28/02).
+DateTime somarMeses(DateTime d, int meses) {
+  final alvo = DateTime(d.year, d.month + meses, 1);
+  final ultimoDia = DateTime(alvo.year, alvo.month + 1, 0).day;
+  return DateTime(alvo.year, alvo.month, d.day > ultimoDia ? ultimoDia : d.day);
+}

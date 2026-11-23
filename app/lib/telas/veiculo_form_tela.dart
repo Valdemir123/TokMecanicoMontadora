@@ -23,6 +23,9 @@ class _VeiculoFormTelaState extends State<VeiculoFormTela> {
   final _ano = TextEditingController();
   final _cor = TextEditingController();
   final _km = TextEditingController();
+  final _kmReferencia = TextEditingController();
+  DateTime? _dataReferencia;
+  bool _porAquisicao = true;
 
   Future<List<Fabricante>>? _fabricantes;
   String? _fabricante;
@@ -54,7 +57,7 @@ class _VeiculoFormTelaState extends State<VeiculoFormTela> {
 
   @override
   void dispose() {
-    for (final c in [_placa, _modelo, _ano, _cor, _km]) {
+    for (final c in [_placa, _modelo, _ano, _cor, _km, _kmReferencia]) {
       c.dispose();
     }
     super.dispose();
@@ -62,6 +65,11 @@ class _VeiculoFormTelaState extends State<VeiculoFormTela> {
 
   Future<void> _salvar() async {
     setState(() => _erro = null);
+    if (!_editando && _dataReferencia == null) {
+      setState(() {});
+      mostrarMensagem(context, 'Informe a data da ${_porAquisicao ? 'aquisição' : 'última revisão'}.', erro: true);
+      return;
+    }
     final fabricanteOk = _fabricante != null;
     if (!_form.currentState!.validate() || !fabricanteOk) {
       if (!fabricanteOk) mostrarMensagem(context, 'Escolha o fabricante.', erro: true);
@@ -75,6 +83,9 @@ class _VeiculoFormTelaState extends State<VeiculoFormTela> {
       'anoFabricacao': int.parse(_ano.text),
       'cor': _cor.text.trim(),
       if (!_editando) 'kmAtual': int.tryParse(somenteDigitos(_km.text)),
+      if (!_editando && _dataReferencia != null) 'dataReferencia': dataIso(_dataReferencia!),
+      if (!_editando && _dataReferencia != null)
+        'kmReferencia': int.tryParse(_kmReferencia.text) ?? int.tryParse(somenteDigitos(_km.text)),
     };
 
     setState(() => _salvando = true);
@@ -178,6 +189,42 @@ class _VeiculoFormTelaState extends State<VeiculoFormTela> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
                   validator: (v) => (v ?? '').isEmpty ? 'Informe o km atual' : null,
                 ),
+                const TituloSecao('Referência das manutenções',
+                    subtitulo: 'Usamos esta data para preencher a última realização de cada manutenção. '
+                        'Você confere a lista logo depois de salvar.'),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: true, label: Text('Data da aquisição'), icon: Icon(Icons.key)),
+                    ButtonSegment(value: false, label: Text('Última revisão'), icon: Icon(Icons.build)),
+                  ],
+                  selected: {_porAquisicao},
+                  onSelectionChanged: (sel) => setState(() => _porAquisicao = sel.first),
+                ),
+                const SizedBox(height: 12),
+                LinhaResponsiva(children: [
+                  CampoData(
+                    rotulo: _porAquisicao ? 'Data da aquisição' : 'Data da última revisão',
+                    valor: _dataReferencia,
+                    erro: _erro?.erroDe('dataReferencia'),
+                    aoMudar: (d) => setState(() => _dataReferencia = d),
+                  ),
+                  TextFormField(
+                    controller: _kmReferencia,
+                    decoration: InputDecoration(
+                      labelText: 'Km nessa data',
+                      suffixText: 'km',
+                      helperText: 'Em branco = km atual',
+                      errorText: _erro?.erroDe('kmReferencia'),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
+                    validator: (v) {
+                      final ref = int.tryParse(v ?? '');
+                      final atual = int.tryParse(somenteDigitos(_km.text));
+                      return ref != null && atual != null && ref > atual ? 'Maior que o km atual' : null;
+                    },
+                  ),
+                ]),
               ],
               const SizedBox(height: 24),
               FilledButton.icon(

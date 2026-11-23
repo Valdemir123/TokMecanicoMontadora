@@ -31,4 +31,10 @@ void main() {
     expect(lerValor('280.5'), 280.5);
     expect(lerValor(''), isNull);
   });
+
+  test('somar meses', () {
+    expect(somarMeses(DateTime(2026, 3, 1), 12), DateTime(2027, 3, 1));
+    expect(somarMeses(DateTime(2026, 1, 31), 1), DateTime(2026, 2, 28));
+    expect(somarMeses(DateTime(2026, 11, 15), 3), DateTime(2027, 2, 15));
+  });
 }
